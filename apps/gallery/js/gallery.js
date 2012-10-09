@@ -234,7 +234,7 @@ function init() {
       showOverlay('nocard');
     else if (why === MediaDB.UNMOUNTED)
       showOverlay('pluggedin');
-  }
+  };
 
   photodb.onready = function() {
     // Hide the nocard or pluggedin overlay if it is displayed
@@ -280,6 +280,8 @@ function init() {
 }
 
 function imageDeleted(filename) {
+  // save the last index for removing last photo.
+  var lastidx = images.length - 1;
   // Find the deleted file in our images array
   for (var n = 0; n < images.length; n++) {
     if (images[n].name === filename)
@@ -304,9 +306,14 @@ function imageDeleted(filename) {
     thumbnailElts[i].dataset.index = i - 1;
   }
 
+  // if remove last photo in full image view,
+  // we need to show previous image, not next image.
   // Adjust currentPhotoIndex, too, if we have to.
-  if (n < currentPhotoIndex)
+  if ((n === lastidx && n === currentPhotoIndex) ||
+       n < currentPhotoIndex) {
     currentPhotoIndex--;
+  }
+
   if (n < editedPhotoIndex)
     editedPhotoIndex--;
 
@@ -893,7 +900,7 @@ function shareFiles(filenames) {
         reader.onload = function() {
           urls[i] = 'data:' + file.type + ';base64,' + btoa(reader.result);
           getDataURLForNextFile();
-        }
+        };
       });
     }
   }
@@ -919,7 +926,7 @@ function shareURLs(urls) {
 
   a.onsuccess = function() {
     reopen();
-  }
+  };
   a.onerror = function(e) {
     if (a.error.name === 'NO_PROVIDER') {
       var msg = navigator.mozL10n.get('share-noprovider');
