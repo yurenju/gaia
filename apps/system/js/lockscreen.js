@@ -231,12 +231,10 @@ var LockScreen = {
           touched: false,
           leftTarget: leftTarget,
           rightTarget: rightTarget,
-          railLeftWidth: this.railLeft.offsetWidth,
-          railRightWidth: this.railRight.offsetWidth,
           overlayWidth: this.overlay.offsetWidth,
-          handleWidth: this.areaHandle.offsetWidth,
-          maxHandleOffset: rightTarget.offsetLeft - handle.offsetLeft -
-            (handle.offsetWidth - rightTarget.offsetWidth) / 2
+          handleHeight: this.areaHandle.offsetHeight,
+          maxHandleOffset: handle.offsetTop - rightTarget.offsetTop -
+            (handle.offsetHeight - rightTarget.offsetHeight) / 2
         };
         window.addEventListener('mouseup', this);
         window.addEventListener('mousemove', this);
@@ -325,13 +323,70 @@ var LockScreen = {
     }
   },
 
-  setRailWidth: function ls_setRailWidth(left, right) {
+  handleMove: function ls_handleMove(pageX, pageY) {
     var touch = this._touch;
-    this.railLeft.style.transform = 'scaleX(' + (left / touch.railLeftWidth) + ')';
-    this.railRight.style.transform = 'scaleX(' + (right / touch.railRightWidth) + ')';
+
+    if (!touch.touched) {
+      // Do nothing if the user have not move the finger to the handle yet
+      if (document.elementFromPoint(pageX, pageY) !== this.areaHandle)
+        return;
+
+      touch.touched = true;
+      touch.initX = pageX;
+      touch.initY = pageY;
+
+      var overlay = this.overlay;
+      overlay.classList.remove('touched-up');
+      overlay.classList.add('touched');
+    }
+
+    var dy = pageY - touch.initY;
+    var handleMax = touch.maxHandleOffset;
+
+    this.unlockArea.style.transform =
+      'translateY(' + Math.max(dy, -70) + 'px)';
+
+    var leftTarget = touch.leftTarget;
+    var rightTarget = touch.rightTarget;
+
+    var handleHeight = touch.handleHeight;
+    var triggered = false;
+
+    touch.dy = dy;
+    if (dy < -70 + 20) {
+      touch.target = this.unlockArea;
+    }
+    else {
+      touch.target = null;
+    }
+
+    /*
+    if (railLeft < handleWidth / 2) {
+      if (!leftTarget.classList.contains('triggered')) {
+        leftTarget.classList.add('triggered');
+        triggered = true;
+      }
+      rightTarget.classList.remove('triggered');
+      touch.target = leftTarget;
+    } else if (railRight < handleWidth / 2) {
+      leftTarget.classList.remove('triggered');
+      if (!rightTarget.classList.contains('triggered')) {
+        rightTarget.classList.add('triggered');
+        triggered = true;
+      }
+      touch.target = rightTarget;
+    } else {
+      leftTarget.classList.remove('triggered');
+      rightTarget.classList.remove('triggered');
+      touch.target = null;
+    }
+
+    if (triggered && navigator.vibrate)
+      navigator.vibrate([200]);
+    */
   },
 
-  handleMove: function ls_handleMove(pageX, pageY) {
+  /*handleMove: function ls_handleMove(pageX, pageY) {
     var touch = this._touch;
 
     if (!touch.touched) {
@@ -349,26 +404,26 @@ var LockScreen = {
       overlay.classList.add('touched');
     }
 
-    var dx = pageX - touch.initX;
+    var dy = pageX - touch.initX;
 
     var handleMax = touch.maxHandleOffset;
     this.areaHandle.style.transform =
-      'translateX(' + Math.max(- handleMax, Math.min(handleMax, dx)) + 'px)';
+      'translateX(' + Math.max(- handleMax, Math.min(handleMax, dy)) + 'px)';
 
     var railMax = touch.railLeftWidth;
-    var railLeft = railMax + dx;
-    var railRight = railMax - dx;
+    var railLeft = railMax + dy;
+    var railRight = railMax - dy;
 
     this.setRailWidth(Math.max(0, Math.min(railMax * 2, railLeft)),
                       Math.max(0, Math.min(railMax * 2, railRight)));
 
     var base = touch.overlayWidth / 4;
-    var opacity = Math.max(0.1, (base - Math.abs(dx)) / base);
+    var opacity = Math.max(0.1, (base - Math.abs(dy)) / base);
 
     var leftTarget = touch.leftTarget;
     var rightTarget = touch.rightTarget;
 
-    if (dx > 0) {
+    if (dy > 0) {
       rightTarget.style.opacity =
         this.railRight.style.opacity = '';
       leftTarget.style.opacity =
@@ -405,20 +460,31 @@ var LockScreen = {
 
     if (triggered && navigator.vibrate)
       navigator.vibrate([200]);
-  },
+  },*/
 
   handleGesture: function ls_handleGesture() {
     var touch = this._touch;
     var target = touch.target;
 
     if (!target) {
-      this.unloadPanel();
+      var self = this;
+      if (touch.dy === 0) {
+        self.areaHandle.classList.add('handleshake');
+        self.areaHandle.addEventListener('animationend', function removeShake() {
+          self.areaHandle.removeEventListener('animationend', removeShake);
+          self.areaHandle.classList.remove('handleshake');
+        });
+      }
+      else {
+        this.unloadPanel();
+      }
       return;
     }
 
     var distance = target.offsetLeft - this.areaHandle.offsetLeft -
       (this.areaHandle.offsetWidth - target.offsetWidth) / 2;
     this.overlay.classList.add('triggered');
+    this.overlay.classList.add('transitioning');
     this.areaHandle.classList.add('triggered');
 
     var transformDistance = 'translateX(' + distance + 'px)';
@@ -429,7 +495,7 @@ var LockScreen = {
     var self = this;
     switch (target) {
       case this.areaCamera:
-        this.setRailWidth(0, railLength);
+        //this.setRailWidth(0, railLength);
 
         var panelOrFullApp = function panelOrFullApp() {
           if (self.passCodeEnabled) {
@@ -465,7 +531,7 @@ var LockScreen = {
         break;
 
       case this.areaUnlock:
-        this.setRailWidth(railLength, 0);
+        //this.setRailWidth(railLength, 0);
 
         var passcodeOrUnlock = function passcodeOrUnlock() {
           if (!self.passCodeEnabled || !self._passCodeTimeoutCheck) {
@@ -486,6 +552,26 @@ var LockScreen = {
           passcodeOrUnlock();
         });
         break;
+      case this.unlockArea:
+          this.unlockArea.addEventListener('transitionend', function goDisperse() {
+            self.unlockArea.removeEventListener('transitionend', goDisperse);
+            self.overlay.classList.add('unlocked');
+            window.setTimeout(function() {
+              self.overlay.classList.remove('unlocked');
+              self.overlay.classList.add('re-unlocked');
+
+              this.areaCamera.addEventListener('transitionend', function unlock2(){
+                self.areaCamera.removeEventListener('transitionend', unlock2);
+                self.overlay.classList.remove('re-unlocked');
+                self.overlay.classList.remove('transitioning');
+                self.unlockArea.style.transform = '';
+                self.unloadPanel();
+              });
+
+            }.bind(self), 7000);
+          });
+          this.unlockArea.style.transform =
+          'translateY(-80px)';
     }
   },
 
@@ -657,15 +743,13 @@ var LockScreen = {
       default:
         var self = this;
         var unload = function unload() {
-          self.areaHandle.style.transform =
+          self.unlockArea.style.transform =
+            self.unlockArea.style.opacity =
             self.areaUnlock.style.opacity =
-            self.railRight.style.opacity =
-            self.areaCamera.style.opacity =
-            self.railLeft.style.opacity =
-            self.railRight.style.transform =
-            self.railLeft.style.transform = '';
+            self.areaCamera.style.opacity = '';
           self.overlay.classList.remove('triggered');
           self.areaHandle.classList.remove('triggered');
+          self.unlockArea.classList.remove('triggered');
           self.areaCamera.classList.remove('triggered');
           self.areaUnlock.classList.remove('triggered');
         };
@@ -882,7 +966,7 @@ var LockScreen = {
     // ID of elements to create references
     var elements = ['connstate', 'mute', 'clock', 'date',
         'area', 'area-unlock', 'area-camera',
-        'area-handle', 'rail-left', 'rail-right', 'passcode-code',
+        'area-handle', 'passcode-code', 'unlock-area',
         'passcode-pad', 'camera', 'accessibility-camera',
         'accessibility-unlock', 'panel-emergency-call'];
 
