@@ -32,53 +32,11 @@ var Wifi = {
     // If wifi is turned off by us and phone got rebooted,
     // bring wifi back.
     var name = 'wifi.disabled_by_wakelock';
-    var req = SettingsListener.getSettingsLock().get(name);
-    req.onsuccess = function gotWifiDisabledByWakelock() {
-      if (!req.result[name])
-        return;
-
-      // Re-enable wifi and reset wifi.disabled_by_wakelock
-      // SettingsListener.getSettingsLock() always return invalid lock
-      // in our usage here.
-      // See https://bugzilla.mozilla.org/show_bug.cgi?id=793239
-      var lock = navigator.mozSettings.createLock();
-      lock.set({ 'wifi.enabled': true });
-      lock.set({ 'wifi.disabled_by_wakelock': false });
-    };
 
     var self = this;
     var wifiManager = window.navigator.mozWifiManager;
 
     // Track the wifi.enabled mozSettings value
-    SettingsListener.observe('wifi.enabled', true, function(value) {
-      if (!wifiManager && value) {
-        self.wifiEnabled = false;
-
-        // roll back the setting value to notify the UIs
-        // that wifi interface is not available
-        if (value) {
-          SettingsListener.getSettingsLock().set({
-            'wifi.enabled': false
-          });
-        }
-
-        return;
-      }
-
-      self.wifiEnabled = value;
-
-      clearTimeout(self._scanTimer);
-      if (!value)
-        return;
-
-      // If wifi is enabled but disconnected.
-      // we would need to call getNetworks() continuously
-      // so we could join known wifi network
-      self._scanTimer = setInterval(function wifi_scan() {
-        if (wifiManager.connection.status == 'disconnected')
-          wifiManager.getNetworks();
-      });
-    });
 
     var power = navigator.mozPower;
     power.addWakeLockListener(function wifi_handleWakeLock(topic, state) {

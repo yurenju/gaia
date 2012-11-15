@@ -311,8 +311,4 @@ var NotificationScreen = {
 
 NotificationScreen.init();
 
-SettingsListener.observe(
-    'lockscreen.notifications-preview.enabled', true, function(value) {
 
-  NotificationScreen.lockscreenPreview = value;
-});

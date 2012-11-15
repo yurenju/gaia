@@ -885,9 +885,7 @@ var WindowManager = (function() {
   }
 
   var isOutOfProcessDisabled = false;
-  SettingsListener.observe('debug.oop.disabled', false, function(value) {
-    isOutOfProcessDisabled = value;
-  });
+
 
   function createFrame(origFrame, origin, url, name, manifest, manifestURL) {
     var frame = origFrame || document.createElement('iframe');

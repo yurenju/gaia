@@ -28,12 +28,7 @@
   // OFF -> VIBRATION -> MUTE
   var muteState = 'OFF';
 
-  SettingsListener.observe('audio.volume.master', 5, function(volume) {
-    if (pendingRequestCount)
-      return;
 
-    currentVolume = volume * 10;
-  });
 
   var activeTimeout = 0;
   function changeVolume(delta) {

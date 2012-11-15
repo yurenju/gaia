@@ -68,8 +68,7 @@ var UpdateManager = {
     window.addEventListener('applicationinstall', this);
     window.addEventListener('applicationuninstall', this);
 
-    SettingsListener.observe('gaia.system.checkForUpdates', false,
-                             this.checkForUpdates.bind(this));
+
   },
 
   startAllDownloads: function um_startAllDownloads(evt) {

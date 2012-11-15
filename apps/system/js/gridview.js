@@ -34,7 +34,5 @@ var GridView = {
   }
 };
 
-SettingsListener.observe('debug.grid.enabled', false, function(value) {
-  !!value ? GridView.show() : GridView.hide();
-});
+
 

@@ -23,26 +23,7 @@ var BluetoothTransfer = {
   init: function bt_init() {
     // Bind message handler for transferring file callback
     var self = this;
-    navigator.mozSetMessageHandler('bluetooth-opp-receiving-file-confirmation',
-      function bt_gotReceivingFileConfirmationMessage(message) {
-        self.onReceivingFileConfirmation(message);
-      }
-    );
-    navigator.mozSetMessageHandler('bluetooth-opp-transfer-start',
-      function bt_gotTransferStartMessage(message) {
-        self.onUpdateProgress('start', message);
-      }
-    );
-    navigator.mozSetMessageHandler('bluetooth-opp-update-progress',
-      function bt_gotUpdateProgressMessage(message) {
-        self.onUpdateProgress('progress', message);
-      }
-    );
-    navigator.mozSetMessageHandler('bluetooth-opp-transfer-complete',
-      function bt_gotTransferCompleteMessage(message) {
-        self.onTransferComplete(message);
-      }
-    );
+
     this.bannerContainer = this.banner.firstElementChild;
   },
 

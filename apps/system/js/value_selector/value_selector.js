@@ -21,40 +21,7 @@ var ValueSelector = {
 
     var self = this;
 
-    window.navigator.mozKeyboard.onfocuschange = function onfocuschange(evt) {
-      var typeToHandle = ['select-one', 'select-multiple', 'date',
-        'time', 'datetime', 'datetime-local'];
 
-      var type = evt.detail.type;
-      // handle the <select> element and inputs with type of date/time
-      // in system app for now
-      if (typeToHandle.indexOf(type) == -1)
-        return;
-
-      var currentValue = evt.detail.value;
-
-      switch (evt.detail.type) {
-        case 'select-one':
-        case 'select-multiple':
-          self.debug('select triggered' + JSON.stringify(evt.detail));
-          self._currentPickerType = evt.detail.type;
-          self.showOptions(evt.detail);
-          break;
-
-        case 'date':
-          self.showDatePicker(currentValue);
-          break;
-
-        case 'time':
-          self.showTimePicker(currentValue);
-          break;
-
-        case 'datetime':
-        case 'datetime-local':
-          // TODO
-          break;
-      }
-    };
 
 
     this._element = document.getElementById('value-selector');

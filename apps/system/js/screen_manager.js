@@ -83,43 +83,13 @@ var ScreenManager = {
     }
 
     this._firstOn = false;
-    SettingsListener.observe('screen.timeout', 60,
-    function screenTimeoutChanged(value) {
-      self._idleTimeout = value;
-      self.setIdleTimeout(self._idleTimeout);
-
-      if (!self._firstOn) {
-        (function handleInitlogo() {
-          var initlogo = document.getElementById('initlogo');
+    var initlogo = document.getElementById('initlogo');
           initlogo.classList.add('hide');
           initlogo.addEventListener('transitionend', function delInitlogo() {
             initlogo.removeEventListener('transitionend', delInitlogo);
             initlogo.parentNode.removeChild(initlogo);
           });
-        })();
 
-        self._firstOn = true;
-
-        // During boot up, the brightness was set by bootloader as 0.5,
-        // Let's set the API value to that so setScreenBrightness() can
-        // dim nicely to value set by user.
-        power.screenBrightness = 0.5;
-
-        // Turn screen on with dim.
-        self.turnScreenOn(false);
-      }
-    });
-
-    SettingsListener.observe('screen.automatic-brightness', true,
-    function deviceLightSettingChanged(value) {
-      self.setDeviceLightEnabled(value);
-    });
-
-    SettingsListener.observe('screen.brightness', 1,
-    function brightnessSettingChanged(value) {
-      self._userBrightness = value;
-      self.setScreenBrightness(value, false);
-    });
   },
 
   handleEvent: function scm_handleEvent(evt) {

@@ -27,35 +27,7 @@ var Bluetooth = {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=782586
 
     var enabled = false;
-    SettingsListener.observe('bluetooth.enabled', true, function(value) {
-      if (!bluetooth) {
-        // roll back the setting value to notify the UIs
-        // that Bluetooth interface is not available
-        if (value) {
-          SettingsListener.getSettingsLock().set({
-            'bluetooth.enabled': false
-          });
-        }
 
-        return;
-      }
-
-      if (value !== enabled && value) {
-        // Setting value is not actually synced with Bluetooth device,
-        // let's wait a bit before getting adapter.
-        if (!bluetooth.enabled) {
-          setTimeout(function timeout() {
-            self.initDefaultAdapter();
-          }, 5000);
-
-          return;
-        }
-
-        self.initDefaultAdapter();
-      }
-
-      enabled = value;
-    });
   },
 
   initDefaultAdapter: function bt_initDefaultAdapter() {

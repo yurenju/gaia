@@ -32,9 +32,7 @@ var SleepMenu = {
     this.elements.cancel.addEventListener('click', this);
 
     var self = this;
-    SettingsListener.observe('ril.radio.disabled', false, function(value) {
-      self.isFlightModeEnabled = value;
-    });
+
   },
 
   // Generate items
@@ -158,9 +156,7 @@ var SleepMenu = {
         if (!window.navigator.mozSettings)
           return;
 
-        SettingsListener.getSettingsLock().set({
-          'ril.radio.disabled': !this.isFlightModeEnabled
-        });
+
 
         break;
 

@@ -130,23 +130,7 @@ var PowerSaveHandler = (function PowerSaveHandler() {
   };
 
   function init() {
-    SettingsListener.observe('powersave.enabled', false,
-      function sl_getPowerSave(value) {
-        var enabled = value;
-        if (enabled) {
-          enablePowerSave();
-        } else {
-          disablePowerSave();
-        }
-        _powerSaveEnabled = enabled;
-      });
 
-    // Monitor the states of various modules
-    for (var j in _states) {
-      SettingsListener.observe(j, true, function getState(state, value) {
-        _states[state] = value;
-      }.bind(null, j));
-    }
   }
 
   // XXX Break down obj keys in a for each loop because mozSettings

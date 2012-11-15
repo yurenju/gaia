@@ -20,29 +20,7 @@ var QuickSettings = {
     var self = this;
 
     // monitor data status
-    SettingsListener.observe('ril.data.enabled', true, function(value) {
-      self.data.dataset.enabled = value;
-    });
 
-    // monitor bluetooth status
-    SettingsListener.observe('bluetooth.enabled', true, function(value) {
-      self.bluetooth.dataset.enabled = value;
-    });
-
-    // monitor wifi status
-    SettingsListener.observe('wifi.enabled', true, function(value) {
-      self.wifi.dataset.enabled = value;
-    });
-
-    // monitor geolocation status
-    SettingsListener.observe('geolocation.enabled', true, function(value) {
-      self.geolocationEnabled = value;
-    });
-
-    // monitor power save mode
-    SettingsListener.observe('powersave.enabled', false, function(value) {
-      self.powerSave.dataset.enabled = value;
-    });
   },
 
   handleEvent: function qs_handleEvent(evt) {

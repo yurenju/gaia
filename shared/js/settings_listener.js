@@ -31,7 +31,10 @@ var SettingsListener = {
     // If there isn't we return one.
     var settings = window.navigator.mozSettings;
 
-    return (this._lock = settings.createLock());
+    return {
+      set: function() {},
+      get: function() {}
+    };
   },
 
   observe: function sl_observe(name, defaultValue, callback) {
@@ -39,6 +42,13 @@ var SettingsListener = {
     if (!settings) {
       window.setTimeout(function() { callback(defaultValue); });
       return;
+    }
+
+    if (name === 'lockscreen.enabled') {
+      callback(true);
+    }
+    if (name === 'wallpaper.image') {
+      callback(null);
     }
 
     var req;
@@ -55,7 +65,7 @@ var SettingsListener = {
       this._lock = null;
       req = this.getSettingsLock().get(name);
     }
-
+    return;
     req.addEventListener('success', (function onsuccess() {
       callback(typeof(req.result[name]) != 'undefined' ?
         req.result[name] : defaultValue);

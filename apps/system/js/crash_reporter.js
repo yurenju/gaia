@@ -19,9 +19,7 @@ var CrashReporter = (function() {
 
   // Only show the "Report" button if the user hasn't set a preference to
   // always/never report crashes.
-  SettingsListener.observe('app.reportCrashes', 'ask', function handleCrashSetting(value) {
-    showReportButton = (value != 'always' && value != 'never');
-  });
+
 
   // This function should only ever be called once.
   function showDialog(crashID, isChrome) {
