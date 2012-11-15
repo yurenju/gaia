@@ -69,6 +69,14 @@ var LockScreen = {
   */
   airplaneMode: false,
 
+  triggeredTimeoutId: 0,
+
+  CURVE_START_DATA: 'M0,80 C100,150 220,150 320,80',
+  CURVE_END_DATA: 'M0,80 C100,-20 220,-20 320,80',
+  CURVE_TRANSFORM_DATA: ['M0,80 C100,', '0', ' 220,', '0', ' 320,80'],
+  CURVE_TRANSFORM_Y1_INDEX: 1,
+  CURVE_TRANSFORM_Y2_INDEX: 3,
+
   /* init */
   init: function ls_init() {
     this.getAllElements();
@@ -85,6 +93,7 @@ var LockScreen = {
     this.areaHandle.addEventListener('mousedown', this);
     this.areaCamera.addEventListener('mousedown', this);
     this.areaUnlock.addEventListener('mousedown', this);
+    this.iconContainer.addEventListener('mousedown', this);
 
     /* Unlock & camera panel clean up */
     this.overlay.addEventListener('transitionend', this);
@@ -227,12 +236,10 @@ var LockScreen = {
         var target = evt.target;
 
         this._touch = {
-          target: null,
+          target: target,
           touched: false,
           leftTarget: leftTarget,
           rightTarget: rightTarget,
-          railLeftWidth: this.railLeft.offsetWidth,
-          railRightWidth: this.railRight.offsetWidth,
           overlayWidth: this.overlay.offsetWidth,
           handleWidth: this.areaHandle.offsetWidth,
           maxHandleOffset: rightTarget.offsetLeft - handle.offsetLeft -
@@ -242,14 +249,7 @@ var LockScreen = {
         window.addEventListener('mousemove', this);
 
         switch (target) {
-          case leftTarget:
-            overlay.classList.add('touched-left');
-            break;
-
-          case rightTarget:
-            overlay.classList.add('touched-right');
-            break;
-
+          case this.area:
           case this.areaHandle:
             this._touch.touched = true;
             this._touch.initX = evt.pageX;
@@ -285,8 +285,8 @@ var LockScreen = {
         window.removeEventListener('mousemove', this);
         window.removeEventListener('mouseup', this);
 
-        this.overlay.classList.remove('touched-left');
-        this.overlay.classList.remove('touched-right');
+        if (evt.target !== this._touch.target)
+          this._touch.target = null;
 
         this.handleMove(evt.pageX, evt.pageY);
         this.handleGesture();
@@ -325,12 +325,6 @@ var LockScreen = {
     }
   },
 
-  setRailWidth: function ls_setRailWidth(left, right) {
-    var touch = this._touch;
-    this.railLeft.style.transform = 'scaleX(' + (left / touch.railLeftWidth) + ')';
-    this.railRight.style.transform = 'scaleX(' + (right / touch.railRightWidth) + ')';
-  },
-
   handleMove: function ls_handleMove(pageX, pageY) {
     var touch = this._touch;
 
@@ -344,93 +338,72 @@ var LockScreen = {
       touch.initY = pageY;
 
       var overlay = this.overlay;
-      overlay.classList.remove('touched-left');
-      overlay.classList.remove('touched-right');
       overlay.classList.add('touched');
     }
 
-    var dx = pageX - touch.initX;
+    var dy = pageY - touch.initY;
 
-    var handleMax = touch.maxHandleOffset;
-    this.areaHandle.style.transform =
-      'translateX(' + Math.max(- handleMax, Math.min(handleMax, dx)) + 'px)';
+    var handleMax = window.innerHeight / 4;
+    var ty = Math.max(- handleMax, dy);
+    var opacity = - ty / handleMax
+    // Curve Y parameter
+    var cy = 150 - opacity * 150
+    touch.cy = cy;
+    var curvedata = this.CURVE_TRANSFORM_DATA.slice();
+    curvedata[this.CURVE_TRANSFORM_Y1_INDEX] = cy;
+    curvedata[this.CURVE_TRANSFORM_Y2_INDEX] = cy;
 
-    var railMax = touch.railLeftWidth;
-    var railLeft = railMax + dx;
-    var railRight = railMax - dx;
-
-    this.setRailWidth(Math.max(0, Math.min(railMax * 2, railLeft)),
-                      Math.max(0, Math.min(railMax * 2, railRight)));
-
-    var base = touch.overlayWidth / 4;
-    var opacity = Math.max(0.1, (base - Math.abs(dx)) / base);
-
-    var leftTarget = touch.leftTarget;
-    var rightTarget = touch.rightTarget;
-
-    if (dx > 0) {
-      rightTarget.style.opacity =
-        this.railRight.style.opacity = '';
-      leftTarget.style.opacity =
-        this.railLeft.style.opacity = opacity;
-    } else {
-      rightTarget.style.opacity =
-        this.railRight.style.opacity = opacity;
-      leftTarget.style.opacity =
-        this.railLeft.style.opacity = '';
-    }
-
-    var handleWidth = touch.handleWidth;
-    var triggered = false;
-
-    if (railLeft < handleWidth / 2) {
-      if (!leftTarget.classList.contains('triggered')) {
-        leftTarget.classList.add('triggered');
-        triggered = true;
-      }
-      rightTarget.classList.remove('triggered');
-      touch.target = leftTarget;
-    } else if (railRight < handleWidth / 2) {
-      leftTarget.classList.remove('triggered');
-      if (!rightTarget.classList.contains('triggered')) {
-        rightTarget.classList.add('triggered');
-        triggered = true;
-      }
-      touch.target = rightTarget;
-    } else {
-      leftTarget.classList.remove('triggered');
-      rightTarget.classList.remove('triggered');
-      touch.target = null;
-    }
-
-    if (triggered && navigator.vibrate)
-      navigator.vibrate([200]);
+    //this.areaHandle.style.opacity = 1;
+    this.iconContainer.style.transform = 'translateY(' + ty / 2 + 'px';
+    this.iconContainer.style.opacity = opacity;
+    this.curvepath.setAttribute('d', curvedata.join(''));
+    //this.areaHandle.style.transform = 'translateY(' + ty + 'px)';
+    this.areaHandle.setAttribute('y', 100-opacity*100);
   },
 
   handleGesture: function ls_handleGesture() {
+    var handleMax = window.innerHeight / 4;
+
     var touch = this._touch;
     var target = touch.target;
 
-    if (!target) {
+    if (!target && touch.cy < 80) {
+      var animations = document.querySelectorAll('.animate-to-end');
+      Array.prototype.forEach.call(animations, function(el) {
+        el.setAttribute('fill', 'freeze');
+        el.beginElement();
+      });
+      var self = this;
+      this.curvepath.addEventListener('endEvent', function endEvent() {
+        self.curvepath.removeEventListener('endEvent', endEvent);
+        self.curvepath.setAttribute('d', self.CURVE_END_DATA);
+        self.curvepath.setAttribute('stroke-opacity', 0);
+        self.areaHandle.setAttribute('y', 0);
+        self.areaHandle.setAttribute('opacity', 0);
+
+        Array.prototype.forEach.call(animations, function(el) {
+          el.removeAttribute('fill');
+        });
+      });
+      this.areaHandle.style.transform =
+        this.areaHandle.style.opacity  =
+        this.iconContainer.style.transform =
+        this.iconContainer.style.opacity = '';
+      this.overlay.classList.add('triggered');
+
+      this.triggeredTimeoutId =
+        window.setTimeout(this.unloadPanel.bind(this), 7000);
+      return;
+    }
+    else if (!target || (target !== this.areaCamera &&
+             target !== this.areaUnlock)) {
       this.unloadPanel();
       return;
     }
 
-    var distance = target.offsetLeft - this.areaHandle.offsetLeft -
-      (this.areaHandle.offsetWidth - target.offsetWidth) / 2;
-    this.overlay.classList.add('triggered');
-    this.areaHandle.classList.add('triggered');
-
-    var transformDistance = 'translateX(' + distance + 'px)';
-    var railLength = touch.rightTarget.offsetLeft -
-      touch.leftTarget.offsetLeft -
-      (this.areaHandle.offsetWidth + target.offsetWidth) / 2;
-
     var self = this;
     switch (target) {
       case this.areaCamera:
-        this.setRailWidth(0, railLength);
-
         var panelOrFullApp = function panelOrFullApp() {
           if (self.passCodeEnabled) {
             // Go to secure camera panel
@@ -451,22 +424,10 @@ var LockScreen = {
           }
         };
 
-
-        if (this.areaHandle.style.transform == transformDistance) {
-          panelOrFullApp();
-          break;
-        }
-        this.areaHandle.style.transform = transformDistance;
-
-        this.areaHandle.addEventListener('transitionend', function goCamera() {
-          self.areaHandle.removeEventListener('transitionend', goCamera);
-          panelOrFullApp();
-        });
+        panelOrFullApp();
         break;
 
       case this.areaUnlock:
-        this.setRailWidth(railLength, 0);
-
         var passcodeOrUnlock = function passcodeOrUnlock() {
           if (!self.passCodeEnabled || !self._passCodeTimeoutCheck) {
             self.unlock();
@@ -474,17 +435,7 @@ var LockScreen = {
             self.switchPanel('passcode');
           }
         };
-
-        if (this.areaHandle.style.transform == transformDistance) {
-          passcodeOrUnlock();
-          break;
-        }
-        this.areaHandle.style.transform = transformDistance;
-
-        this.areaHandle.addEventListener('transitionend', function goUnlock() {
-          self.areaHandle.removeEventListener('transitionend', goUnlock);
-          passcodeOrUnlock();
-        });
+        passcodeOrUnlock();
         break;
     }
   },
@@ -629,7 +580,7 @@ var LockScreen = {
     }
   },
 
-  unloadPanel: function ls_loadPanel(panel, toPanel, callback) {
+  unloadPanel: function ls_unloadPanel(panel, toPanel, callback) {
     switch (panel) {
       case 'passcode':
         // Reset passcode panel only if the status is not error
@@ -657,17 +608,36 @@ var LockScreen = {
       default:
         var self = this;
         var unload = function unload() {
+          var animations = document.querySelectorAll('.animate-to-start');
+          Array.prototype.forEach.call(animations, function(el) {
+            el.setAttribute('fill', 'freeze');
+            el.beginElement();
+          })
+          self.curvepath.addEventListener('endEvent', function eventend() {
+            self.curvepath.removeEventListener('endEvent', eventend);
+            self.curvepath.setAttribute('d', self.CURVE_START_DATA);
+            self.curvepath.setAttribute('stroke-opacity', '1.0');
+            self.areaHandle.setAttribute('y', 100);
+            self.areaHandle.setAttribute('opacity', 1);
+            Array.prototype.forEach.call(animations, function(el) {
+              el.removeAttribute('fill');
+            });
+          });
+
           self.areaHandle.style.transform =
+            self.areaUnlock.style.transform =
+            self.areaCamera.style.transform =
+            self.iconContainer.style.transform =
+            self.iconContainer.style.opacity =
+            self.areaHandle.style.opacity =
             self.areaUnlock.style.opacity =
-            self.railRight.style.opacity =
-            self.areaCamera.style.opacity =
-            self.railLeft.style.opacity =
-            self.railRight.style.transform =
-            self.railLeft.style.transform = '';
+            self.areaCamera.style.opacity = '';
           self.overlay.classList.remove('triggered');
           self.areaHandle.classList.remove('triggered');
           self.areaCamera.classList.remove('triggered');
           self.areaUnlock.classList.remove('triggered');
+
+          window.clearTimeout(self.triggeredTimeoutId);
         };
 
         if (toPanel !== 'camera') {
@@ -884,8 +854,8 @@ var LockScreen = {
   getAllElements: function ls_getAllElements() {
     // ID of elements to create references
     var elements = ['connstate', 'mute', 'clock', 'date',
-        'area', 'area-unlock', 'area-camera',
-        'area-handle', 'rail-left', 'rail-right', 'passcode-code',
+        'area', 'area-unlock', 'area-camera', 'icon-container',
+        'area-handle', 'passcode-code', 'curvepath',
         'passcode-pad', 'camera', 'accessibility-camera',
         'accessibility-unlock', 'panel-emergency-call'];
 
