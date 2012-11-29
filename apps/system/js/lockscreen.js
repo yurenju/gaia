@@ -248,7 +248,10 @@ var LockScreen = {
         this.updateConnState();
 
       case 'click':
-        if (evt.target === this.areaUnlock || evt.target === this.areaCamera) {
+        if ((evt.target === this.areaUnlock ||
+            evt.target === this.areaCamera) &&
+            this.overlay.classList.contains('triggered')) {
+          console.log('handleIconClick');
           this.handleIconClick(evt.target);
           break;
         }
@@ -268,15 +271,13 @@ var LockScreen = {
         var overlay = this.overlay;
         var target = evt.target;
 
-        if (target === leftTarget || target === rightTarget) {
-          break;
-        }
-
+        /*
         if (overlay.classList.contains('triggered') &&
             target != leftTarget && target != rightTarget) {
           this.unloadPanel();
           break;
         }
+        */
 
         this.iconContainer.classList.remove('elastic');
         this.setElasticEnabled(false);

@@ -216,27 +216,33 @@
 
 #lockscreen-area {
   position: absolute;
-  height: 10rem;
+  height: 16rem;
   left: 0;
   right: 0;
   bottom: 0;
 }
 
-.lockscreen-icon {
+.lockscreen-icon-area {
+  width: 16rem;
+  height: 10rem;
   position: absolute;
+  bottom: 1rem;
+  margin-bottom: -2.1rem;
+  background-color: rgba(0,0,0,0.5)
+  border: none;
+}
+
+.lockscreen-icon {
+  margin: auto;
   border-radius: 3rem;
   width: 6rem;
   height: 6rem;
-  bottom: 1rem;
-  margin-bottom: -2.1rem;
   background-color: rgba(0, 0, 0, 0.3);
-  outline: none;
-
   -moz-box-sizing: border-box;
   border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
-.lockscreen-icon:active {
+.lockscreen-icon-area:active > .lockscreen-icon {
   background-color: rgb(0, 138, 170);
 }
 
@@ -265,11 +271,11 @@
 }
 
 .lockscreen-icon-right {
-  right: 4rem;
+  right: 0;
 }
 
 .lockscreen-icon-left {
-  left: 4rem;
+  left: 0;
 }
 
 button::-moz-focus-inner {
@@ -282,13 +288,13 @@ button::-moz-focus-inner {
   animation: none;
 }
 
-#lockscreen-area-unlock {
+#lockscreen-area-unlock > div {
   background-image: url('./images/icon-unlock.png');
   background-position: center;
   background-repeat: no-repeat;
 }
 
-#lockscreen-area-camera {
+#lockscreen-area-camera > div {
   background: url('./images/icon-camera.png');
   background-position: center;
   background-repeat: no-repeat;
