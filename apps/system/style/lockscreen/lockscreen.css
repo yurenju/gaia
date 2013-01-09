@@ -485,8 +485,7 @@ button::-moz-focus-inner {
 }
 
 #lockscreen-passcode-pad > a:active {
-  background-color: rgb(0, 0, 0);
-  color: #ccc;
+  background-color: rgb(0, 138, 170);
 }
 
 #lockscreen-passcode-pad > a.lockscreen-passcode-pad-func {
