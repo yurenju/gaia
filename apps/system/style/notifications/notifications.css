@@ -126,18 +126,22 @@ html, body {
   pointer-events: none;
 }
 
-.notification > div:first-of-type {
-  margin: 10px 0 0 50px;
+.title-and-date > div:first-of-type {
+  margin: 10px 0 0 0;
   font-size: 1.5rem;
   font-weight: 500;
   line-height: 1.9rem;
   color: #FFFFFF;
 }
 
-.notification > div {
-  margin: 0 0 0 50px;
+.title-and-date {
+  display: table;
+  width: -moz-available;
+  table-layout: fixed;
+}
+
+.notification div {
   padding: 0;
-  width: -moz-calc(100% - 55px);
   color: #bfbfbf;
   font-size: 1.4rem;
   line-height: 1.9rem;
@@ -148,24 +152,34 @@ html, body {
   white-space: nowrap;
 }
 
-.notification > .timestamp {
-  position: absolute;
-  right: 0;
-  top: 0;
+.title-and-date > .timestamp {
   color: #52B6CC;
   margin: 12px 15px 0 0;
-  padding: 0;
-  display: inline;
+  padding: 0 1.5rem 0 0.5rem;
   line-height: 16px;
+  display: table-cell;
+  width: -moz-min-content;
+  white-space: nowrap;
+}
+
+.notification .title-and-date,
+.notification .detail {
+  padding-left: 50px;
+}
+
+.notification .detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 1.5rem;
 }
 
 .notification > img {
-  float: left;
-  display: block;
   width: 30px;
   height: 30px;
   margin: 15px 10px;
   pointer-events: none;
+  position: absolute;
 }
 
 .notification.disappearing,

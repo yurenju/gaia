@@ -219,7 +219,9 @@ var NotificationScreen = {
 
   addNotification: function ns_addNotification(detail) {
     var notificationNode = document.createElement('div');
+    var firstline = document.createElement('div');
     notificationNode.className = 'notification';
+    firstline.className = 'title-and-date'
 
     notificationNode.dataset.notificationID = detail.id;
     notificationNode.dataset.manifestURL = detail.manifestURL;
@@ -231,19 +233,21 @@ var NotificationScreen = {
       this.toasterIcon.src = detail.icon;
     }
 
+    var title = document.createElement('div');
+    title.textContent = detail.title;
+    firstline.appendChild(title);
+
+    this.toasterTitle.textContent = detail.title;
+
     var time = document.createElement('span');
     var timestamp = new Date();
     time.classList.add('timestamp');
     time.dataset.timestamp = timestamp;
     time.textContent = navigator.mozL10n.DateTimeFormat()
       .fromNow(timestamp, true);
-    notificationNode.appendChild(time);
+    firstline.appendChild(time);
 
-    var title = document.createElement('div');
-    title.textContent = detail.title;
-    notificationNode.appendChild(title);
-
-    this.toasterTitle.textContent = detail.title;
+    notificationNode.appendChild(firstline);
 
     var message = document.createElement('div');
     message.classList.add('detail');
