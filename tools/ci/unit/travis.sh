@@ -35,7 +35,8 @@ echo
 
 section_echo 'Download Firefox and install all test-agent-server dependencies'
 curl "$FIREFOX_URL" | tar jx
-make common-install
+echo 'Download & install node dependencies'
+make common-install &> /dev/null
 echo
 
 # Make gaia for test-agent environment
@@ -46,12 +47,12 @@ make test-agent-server &
 waiting_port 8789
 
 section_echo 'Start Firefox'
-firefox/firefox -profile `pwd`/profile "$TESTAGENT_URL" &
+firefox/firefox -profile `pwd`/profile "$TESTAGENT_URL" &> /dev/null &
 waiting_port 8080
 sleep 5
 
 section_echo 'make test-agent-test'
-make test-agent-test
+make test-agent-test REPORTER=Min
 TEST_RESULT_STATUS=$?
 echo
 
