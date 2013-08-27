@@ -317,7 +317,15 @@ var KeypadManager = {
         if (key != 'delete') {
           if (keypadSoundIsEnabled) {
             // We do not support long press if not on a call
-            TonePlayer.start(gTonesFrequencies[key], !this._onCall);
+            //TonePlayer.start(gTonesFrequencies[key], !this._onCall);
+            var audio = new Audio();
+            var intKey = parseInt(key);
+            if (!intKey) {
+              audio.src = 'style/audio/thanks.ogg';
+            } else {
+              audio.src = 'style/audio/' + key + '.ogg';
+            }
+            audio.play();
           }
         }
 
