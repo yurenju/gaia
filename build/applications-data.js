@@ -1,7 +1,7 @@
 'use strict';
 
 var utils = require('./utils');
-var config = require('./config').config;
+var config;
 
 const PREFERRED_ICON_SIZE = 60;
 const GAIA_CORE_APP_SRCDIR = 'apps';
@@ -49,14 +49,16 @@ function bestMatchingIcon(preferred_size, manifest, origin) {
 }
 
 function iconDescriptor(directory, app_name, entry_point) {
+  let gaia = utils.getGaia(config);
   let origin = utils.gaiaOriginURL(app_name);
-  let manifestURL = utils.gaiaManifestURL(app_name);
+  let manifestURL = utils.gaiaManifestURL(app_name,
+    config.GAIA_SCHEME,  config.GAIA_DOMAIN, config.GAIA_PORT);
 
   // Locate the directory of a given app.
   // If the directory (Gaia.distributionDir)/(directory)/(app_name) exists,
   // favor it over (GAIA_DIR)/(directory)/(app_name).
-  let targetDir = utils.Gaia.distributionDir ?
-    utils.Gaia.distributionDir : config.GAIA_DIR;
+  let targetDir = gaia.distributionDir ?
+    gaia.distributionDir : config.GAIA_DIR;
   let dir = utils.getFile(targetDir, directory, app_name);
 
   if (!dir.exists()) {
@@ -109,7 +111,9 @@ function iconDescriptor(directory, app_name, entry_point) {
   };
 }
 
-function execute() {
+function execute(options) {
+  config = options;
+  var distDir = config.GAIA_DISTRIBUTION_DIR;
   // zeroth grid page is the dock
   let customize = {'homescreens': [
     [
@@ -142,7 +146,7 @@ function execute() {
   }
 
   customize = JSON.parse(utils.getDistributionFileContent('homescreens',
-    customize));
+    customize, distDir));
   // keep e.me on by default
   let search_page_enabled = (customize.search_page) ?
                             customize.search_page.enabled : true;
@@ -210,7 +214,7 @@ function execute() {
   content = ['4850', '7000'];
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('sms-blacklist', content));
+    utils.getDistributionFileContent('sms-blacklist', content, distDir));
 
   // Active Sensors
   init = utils.getFile(config.GAIA_DIR,
@@ -218,7 +222,7 @@ function execute() {
   content = { ambientLight: true };
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('sensors', content));
+    utils.getDistributionFileContent('sensors', content, distDir));
 
   // Support
   init = utils.getFile(config.GAIA_DIR,
@@ -226,7 +230,7 @@ function execute() {
   content = null;
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('support', content));
+    utils.getDistributionFileContent('support', content, distDir));
 
   // Browser
   init = utils.getFile(config.GAIA_DIR, 'apps', 'browser', 'js', 'init.json');
@@ -286,7 +290,7 @@ function execute() {
   };
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('browser', content));
+    utils.getDistributionFileContent('browser', content, distDir));
 
   // Active Sensors
   init = utils.getFile(config.GAIA_DIR,
@@ -294,7 +298,7 @@ function execute() {
   content = { ambientLight: true };
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('sensors', content));
+    utils.getDistributionFileContent('sensors', content, distDir));
 
   // Support
   init = utils.getFile(config.GAIA_DIR,
@@ -302,7 +306,7 @@ function execute() {
   content = null;
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('support', content));
+    utils.getDistributionFileContent('support', content, distDir));
 
   // Network Types
   init = utils.getFile(config.GAIA_DIR,
@@ -313,7 +317,7 @@ function execute() {
   };
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('network', content));
+    utils.getDistributionFileContent('network', content, distDir));
 
   // ICC / STK
   init = utils.getFile(config.GAIA_DIR,
@@ -322,7 +326,8 @@ function execute() {
     'defaultURL': 'http://www.mozilla.org/en-US/firefoxos/'
   };
 
-  utils.writeContent(init, utils.getDistributionFileContent('icc', content));
+  utils.writeContent(init,
+    utils.getDistributionFileContent('icc', content, distDir));
 
   // WAP UA profile url
   init = utils.getFile(config.GAIA_DIR,
@@ -330,7 +335,7 @@ function execute() {
   content = {};
 
   utils.writeContent(init,
-    utils.getDistributionFileContent('wapuaprof.json', content));
+    utils.getDistributionFileContent('wapuaprof.json', content, distDir));
 
   // Calendar Config
   init = utils.getFile(config.GAIA_DIR, 'apps', 'calendar', 'js', 'presets.js');
@@ -393,7 +398,8 @@ function execute() {
   };
 
   utils.writeContent(init, 'Calendar.Presets = ' +
-               utils.getDistributionFileContent('calendar', content) + ';');
+               utils.getDistributionFileContent('calendar', content, distDir) +
+               ';');
 
   // Communications config
   init = utils.getFile(config.GAIA_DIR,
@@ -407,7 +413,7 @@ function execute() {
     'testToken': ''
   };
   utils.writeContent(init,
-    utils.getDistributionFileContent('communications', content));
+    utils.getDistributionFileContent('communications', content, distDir));
 
   // Communications External Services
   init = utils.getFile(config.GAIA_DIR,
@@ -424,7 +430,8 @@ function execute() {
 
   utils.writeContent(init,
     'var oauthflow = this.oauthflow || {}; oauthflow.params = ' +
-    utils.getDistributionFileContent('communications_services', content) + ';');
+    utils.getDistributionFileContent('communications_services', content,
+    distDir) + ';');
 }
 
 exports.execute = execute;
