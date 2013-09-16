@@ -1,0 +1,3 @@
+#! /bin/bash
+
+make test-agent-test REPORTER=Min
