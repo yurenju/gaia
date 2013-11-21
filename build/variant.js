@@ -445,3 +445,4 @@ function execute(options) {
 }
 
 exports.execute = execute;
+exports.downloadApp = downloadApp;
