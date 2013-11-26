@@ -21,6 +21,7 @@ const DEFAULT_PAGE = 2;
 var utils, variant;
 
 var Homescreen = {
+  operators: {},
 
   init: function hs_init() {
     var self = this;
@@ -31,6 +32,7 @@ var Homescreen = {
     this.searchResultContainer =
       document.getElementById('marketplace-search-container');
     this.addPageButton.addEventListener('click', this.addPage.bind(this));
+    this.carriersElement = document.getElementById('carriers');
 
     if (this.grid.children.length <= 1) {
       for (var i = 0; i < DEFAULT_PAGE; i++) {
@@ -54,7 +56,7 @@ var Homescreen = {
     document.getElementById('marketplace-keyword').addEventListener('click',
       function(evt) {
         this.select();
-      });
+    });
     document.getElementById('marketplace-search').addEventListener('click',
       function(evt) {
         var keyword = document.getElementById('marketplace-keyword').value;
@@ -62,6 +64,25 @@ var Homescreen = {
           self.search(keyword);
         } else {
           alert('Please specify a keyword.');
+        }
+    });
+
+    function createCarrier() {
+      var div = document.createElement('div');
+      div.classList.add('carrier');
+      self.createCarrierEditor(div);
+      self.carriersElement.appendChild(div);
+    }
+
+    document.getElementById('add-carrier').addEventListener('click',
+      createCarrier.bind(this));
+    document.getElementById('certain-mcc-mnc').addEventListener('change',
+      function(evt) {
+        var app = self.apps[self.editingAppElement.dataset.name];
+        if (evt.target.checked) {
+          app.forCarriers = true;
+        } else {
+          app.forCarriers = false;
         }
       });
 
@@ -71,6 +92,7 @@ var Homescreen = {
         delete self.searchResult;
       }
     });
+    createCarrier();
   },
 
   search: function hs_search(keyword) {
@@ -212,9 +234,177 @@ var Homescreen = {
   },
 
   showOptions: function hs_showOptions(evt) {
+    var self = this;
     this.editingAppElement = evt.target;
+    var checkbox = document.getElementById('certain-mcc-mnc');
+    var optionsContent = document.getElementById('options-content');
+    var desc = document.getElementById('carriers-disabled-desc');
+    var name = this.editingAppElement.dataset.name;
     document.getElementById('options-title').innerHTML = evt.target.innerHTML;
     window.location.hash = '#options';
+
+    function updateView(name) {
+      var inputs =
+        document.querySelectorAll('.carrier input[type="checkbox"]');
+      Array.prototype.forEach.call(inputs, function(input) {
+        var operatorId = input.dataset.operatorId;
+        input.checked = self.operators[operatorId].apps[name] ? true : false;
+      });
+    }
+
+    if (!this.apps[name]) {
+      throw new Error('App doesn\'t exist: ' + name);
+    } else if (this.apps[name].metadata &&
+      this.apps[name].metadata.source === 'external') {
+      updateView(name);
+      checkbox.checked = this.apps[name].forCarriers || false;
+      optionsContent.classList.remove('hidden');
+      desc.classList.add('hidden');
+      checkbox.disabled = false;
+    } else {
+      desc.classList.remove('hidden');
+      optionsContent.classList.add('hidden');
+      checkbox.disabled = true;
+    }
+  },
+
+  updateOperators: function hs_updateOperators(operator, appName) {
+    var prevCarrierName;
+    if (this.editingOperator) {
+      prevCarrierName = this.editingOperator.id;
+    } else {
+      prevCarrierName = operator.id;
+    }
+
+    if (this.operators[prevCarrierName] && prevCarrierName !== operator.id) {
+      operator.apps = this.operators[prevCarrierName].apps;
+      delete this.operators[prevCarrierName];
+    }
+    this.operators[operator.id] = operator;
+
+    if (appName) {
+      operator.apps[appName] = true;
+    }
+  },
+
+  getOperator: function hs_getOperator(name) {
+    var operator;
+    this.operators.every(function(opr) {
+      if (opr.id === name) {
+        operator = opr;
+        return false;
+      }
+      return true;
+    });
+    return operator;
+  },
+
+  convertToOperator: function hs_convertToOperator(el) {
+    var carrierName = el.querySelector('[data-field="carrierName"]').value;
+    var mccmnc = el.querySelector('[data-field="mccmnc"]').value;
+    var mccmncArray = mccmnc.split(',').map(function(item) {
+      return item.trim();
+    });
+    return {
+      'id': carrierName,
+      'mcc-mnc': mccmncArray,
+      'apps': {}
+    };
+  },
+
+  switchCarrierMode: function hs_switchCarrierMode(carrier, toEdit) {
+    function removeAllChildren(element) {
+      while (element.firstChild) {
+        element.removeChild(element.firstChild);
+      }
+    }
+
+    if (toEdit) {
+      var carrierName =
+        carrier.querySelector('input[type="checkbox"]').dataset.operatorId;
+      var operator = this.operators[carrierName];
+      this.editingOperator = operator;
+      removeAllChildren(carrier);
+      this.createCarrierEditor(carrier, operator);
+    } else {
+      var operator = this.convertToOperator(carrier);
+      removeAllChildren(carrier);
+      this.createCarrierView(carrier, operator.id);
+      delete this.editingOperator;
+    }
+  },
+
+  createCarrierView: function hs_createCarrierView(div, carrierName) {
+    var {normalizeString} = utils;
+    var self = this;
+    var operator = this.operators[carrierName];
+
+    var checkbox = document.createElement('input');
+    checkbox.dataset.operatorId = carrierName;
+    checkbox.dataset.normalizedName = normalizeString(carrierName);
+    checkbox.type = 'checkbox';
+    checkbox.id = 'checkbox-' + checkbox.dataset.normalizedName;
+
+    var label = document.createElement('label');
+    label.setAttribute('for', checkbox.id);
+    label.innerHTML = carrierName;
+
+    var span = document.createElement('span');
+    span.innerHTML = ' - ';
+    var edit = document.createElement('a');
+    edit.innerHTML = 'edit';
+
+    checkbox.checked = (operator &&
+      operator.apps[this.editingAppElement.dataset.name]);
+
+    checkbox.addEventListener('change', function(evt) {
+      var operator = self.operators[evt.target.dataset.operatorId];
+      if (evt.target.checked) {
+        operator.apps[self.editingAppElement.dataset.name] = true;
+      } else {
+        delete operator.apps[self.editingAppElement.dataset.name];
+      }
+    });
+
+    edit.addEventListener('click', function(evt) {
+      self.switchCarrierMode(div, true);
+    });
+
+    span.appendChild(edit);
+    [checkbox, label, span].forEach(function(child) {
+      div.appendChild(child);
+    });
+  },
+
+  createCarrierEditor: function hs_createCarrierEditor(div, operator) {
+    var self = this;
+    function createInput(field, placeholder) {
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = placeholder;
+      input.dataset.field = field;
+      return input;
+    }
+
+    var nameInput = createInput('carrierName', 'Carrier Name');
+    var mccmncInput = createInput('mccmnc', 'mcc/mnc');
+    var save = document.createElement('a');
+    save.innerHTML = 'Save';
+    save.addEventListener('click', function(evt) {
+      var carrier = evt.target.parentElement;
+      var operator = self.convertToOperator(carrier);
+      self.updateOperators(operator, self.editingAppElement.dataset.name);
+      self.switchCarrierMode(carrier, false);
+    });
+
+    if (operator) {
+      nameInput.value = operator.id;
+      mccmncInput.value = operator['mcc-mnc'].join(', ');
+    }
+
+    [nameInput, mccmncInput, save].forEach(function(el) {
+      div.appendChild(el);
+    });
   },
 
   removeApp: function hs_removeApp() {
@@ -226,12 +416,16 @@ var Homescreen = {
     this.editingAppElement.remove();
     delete this.editingAppElement;
 
+    for (var key in this.operators) {
+      delete this.operators[key].apps[this.editingAppElement.dataset.name];
+    }
+
     window.location.hash = '';
   },
 
   getMetadata: function hs_getMetadata(entry, manifest, callback) {
-    var {normalizeAppId} = utils;
-    var name = normalizeAppId(entry.name)
+    var {normalizeString} = utils;
+    var name = normalizeString(entry.name)
     var metadata = {
       'name': name,
       'installOrigin': MARKETPLACE_INSTALL_ORIGIN,
@@ -280,7 +474,7 @@ var Homescreen = {
   processAppDownload: function hs_processAppDownload(metadata, json) {
     var {getFile, ensureFolderExists} = utils;
     var {downloadApp} = variant;
-    var filteredMetadata = this.filterProperties(metadata,['origin',
+    var filteredMetadata = this.filterProperties(metadata, ['origin',
       'manifestURL', 'installOrigin', 'etag', 'packageEtag']);
     var appPath = getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR,
       EXTERNAL_APP_DIR, metadata.name);
@@ -297,9 +491,9 @@ var Homescreen = {
   },
 
   addAppFromMarketplace: function hs_addAppFromMarketplace(evt) {
-    var {normalizeAppId} = utils;
+    var {normalizeString} = utils;
     var entry = this.searchResult.objects[evt.currentTarget.dataset.index];
-    var name = normalizeAppId(entry.name);
+    var name = normalizeString(entry.name);
     if (this.apps[name]) {
       alert(name + ' is existed.');
       return;
@@ -475,6 +669,12 @@ var Homescreen = {
       throw new Error('utils module doesn\'t exist');
     }
 
+    var variant = {
+      'apps': {},
+      'operators': []
+    };
+
+    var operators = JSON.parse(JSON.stringify(this.operators));
     var distDir = utils.getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR);
     utils.ensureFolderExists(distDir);
 
@@ -501,6 +701,23 @@ var Homescreen = {
 
         if (!self.apps[name]) {
           throw new Error('App doesn\'t exist: ' + name);
+        }
+
+        if (self.apps[name].forCarriers) {
+          for (var key in self.operators) {
+            if (self.operators[key].apps[name]) {
+              operators[key].apps[name] = {
+                'id': name,
+                'screen': index,
+                'position': position
+              };
+              variant.apps[name] =
+                self.filterProperties(self.apps[name].metadata,
+                ['origin', 'manifestURL', 'installOrigin', 'etag']
+              );
+            }
+          }
+          return;
         }
 
         var f = utils.getFile(self.apps[name].path);
@@ -536,6 +753,14 @@ var Homescreen = {
     var homescreenFile = distDir.clone();
     homescreenFile.append('homescreens.json');
     utils.writeContent(homescreenFile, JSON.stringify(grid, undefined, 2));
+
+    for (var key in operators) {
+      variant.operators.push(operators[key]);
+    }
+
+    var variantFile = distDir.clone();
+    variantFile.append('variant.json');
+    utils.writeContent(variantFile, JSON.stringify(variant, undefined, 2));
 
     // open directory in file manager if click save button
     if (evt && evt.target) {
