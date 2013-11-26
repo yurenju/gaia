@@ -4,8 +4,8 @@
 	<meta charset="UTF-8">
 	<title>Homescreen customization</title>
 	<link rel="stylesheet" href="chrome://gaia-build/content/aboutGaia.css">
-	<script type="application/javascript;version=1.8" src="chrome://gaia-build/content/aboutGaia.js"></script>
   <script type="application/javascript;version=1.8" src="chrome://gaia-build/content/gaia.js"></script>
+	<script type="application/javascript;version=1.8" src="chrome://gaia-build/content/aboutGaia.js"></script>
 </head>
 <body>
 <div id="content">
@@ -27,7 +27,6 @@
     </section>
 		<button id="launch">Preview</button><button id="save">Save</button>
     <a id="reset-gaia">Reset gaia path</a>
-    <div id="warning" class="warning"></div>
 	</div>
 	<div id="main">
 		<div id="notification">Your app will be added into selected page.</div>
@@ -67,6 +66,8 @@
   <div class="lightbox-background">
     <a href="#" class="closemsg"></a>
     <div class="lightbox-container">
+      <div class="noted">Noted: Packaged app can't be executed in Browser, you need to verify it in b2g-desktop or device.</div>
+      <div id="marketplace-search-container"></div>
     </div>
   </div>
 </div>

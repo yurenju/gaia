@@ -9,13 +9,16 @@ const PAGE_MAX_APP = 16;
 const DOCK_MAX_APP = 5;
 const MARKETPLACE_INSTALL_ORIGIN = 'https://marketplace.firefox.com';
 const EXTERNAL_APP_DIR = 'external-apps';
+const MARKETPLACE_SEARCH_HASH = '#marketplace-search-result';
+const MARKETPLACE_SEARCH_BASEURL = 'https://marketplace.firefox.com/api/v1/' +
+  'apps/search/?device=firefoxos&q=';
 
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/FileUtils.jsm');
 
 const GAIA_DIR_PREF_NAME = 'extensions.gaia.dir';
 const DEFAULT_PAGE = 2;
-var buildModules = {}, Gaia;
+var utils, variant;
 
 var Homescreen = {
 
@@ -26,7 +29,7 @@ var Homescreen = {
     this.dock = document.getElementById('dock');
     this.apps = [];
     this.searchResultContainer =
-      document.querySelector('#marketplace-search-result .lightbox-container');
+      document.getElementById('marketplace-search-container');
     this.addPageButton.addEventListener('click', this.addPage.bind(this));
 
     if (this.grid.children.length <= 1) {
@@ -58,24 +61,32 @@ var Homescreen = {
         if (keyword) {
           self.search(keyword);
         } else {
-          alert('Please don\'t query an empty keyword');
+          alert('Please specify a keyword.');
         }
       });
+
+    window.addEventListener('hashchange', function(evt) {
+      var oldURL = new URL(evt.oldURL);
+      if (oldURL.hash === MARKETPLACE_SEARCH_HASH) {
+        delete self.searchResult;
+      }
+    });
   },
 
   search: function hs_search(keyword) {
-    var {downloadJSON} = buildModules.utils;
+    var {downloadJSON} = utils;
     this.searchResultContainer.innerHTML = 'Loading...';
-    window.location.href = '#marketplace-search-result';
+    window.location.hash = MARKETPLACE_SEARCH_HASH;
     var self = this;
-    var base = 'https://marketplace.firefox.com/api/v1/apps/search/?' +
-      'device=firefoxos&q=';
-    downloadJSON(base + encodeURI(keyword), function(json) {
+    var url = MARKETPLACE_SEARCH_BASEURL + encodeURI(keyword);
+    downloadJSON(url, function(json) {
       if (json) {
         self.searchResult = json;
         self.showSearchResult(self.searchResult);
       } else {
-        throw new Error('Search function for Marketplace isn\'t available');
+        var msg = 'Marketplace search request failed';
+        alert(msg)
+        throw new Error(msg);
       }
     });
   },
@@ -100,7 +111,8 @@ var Homescreen = {
       'name': 'div',
       'author': 'div',
       'ratings': 'div',
-      'review': 'div'
+      'review': 'div',
+      'type': 'div'
     };
     for (var key in elements) {
       var el = document.createElement(elements[key]);
@@ -113,11 +125,12 @@ var Homescreen = {
     elements.author.innerHTML = obj.author;
     elements.icon.src = obj.icons['64'];
     var ratings = Math.round(obj.ratings.average);
-    elements.ratings.innerHTML = new Array(ratings + 1).join('★');
+    elements.ratings.innerHTML = new Array(ratings + 1).join('&#9733;');
     var len = elements.ratings.innerHTML.length;
-    elements.ratings.innerHTML += new Array(FULL_STARS - len + 1).join('☆');
+    elements.ratings.innerHTML += new Array(FULL_STARS - len + 1).join('&#9734;');
     elements.ratings.dataset.average = obj.ratings.average;
     elements.review.innerHTML = obj.ratings.count + ' reviews';
+    elements.type.dataset.isPackaged = obj.is_packaged;
 
     container.dataset.index = index;
     container.addEventListener('click', this.addAppFromMarketplace.bind(this));
@@ -130,7 +143,7 @@ var Homescreen = {
       throw new Error('Homescreen.gaiaConfig doesn\'t exist');
     }
     var c = this.gaiaConfig;
-    var {getAppsByList} = buildModules.utils;
+    var {getAppsByList} = utils;
     var apps = getAppsByList(this.buildConfig[buildname].content,
       c.GAIA_DIR, c.GAIA_DISTRIBUTION_DIR);
     this.setApps(apps);
@@ -217,33 +230,32 @@ var Homescreen = {
   },
 
   processAppDownload: function hs_processAppDownload(metadata, json) {
-    var {getFile, normalizeAppId, ensureFolderExists} = buildModules.utils;
-    var {downloadApp} = buildModules.variant;
+    var {getFile, normalizeAppId, ensureFolderExists} = utils;
+    var {downloadApp} = variant;
     var appId = normalizeAppId(json.name);
     var appPath = getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR,
       EXTERNAL_APP_DIR, appId);
     ensureFolderExists(appPath);
     downloadApp(metadata.manifestURL, json, appPath.path, appId,
-      metadata.origin, metadata.installOrigin, function() {
-        var {getApp} = buildModules.utils;
+      metadata.origin, metadata.installOrigin, metadata, function() {
+        var {getApp} = utils;
         var app = getApp(EXTERNAL_APP_DIR, appId,
           this.gaiaConfig.GAIA_DIR,
           this.gaiaConfig.GAIA_DISTRIBUTION_DIR);
-        this.processMetadata(app.path, metadata);
-        if (!this.apps[appId]) {
-          this.apps[appId] = app;
-        } else {
-          throw new Error('duplicate app: ' + appId);
-        }
+        this.apps[appId] = app;
         window.location.hash = '';
     }.bind(this));
   },
 
   addAppFromMarketplace: function hs_addAppFromMarketplace(evt) {
-    var {normalizeAppId} = buildModules.utils;
-    this.searchResultContainer.innerHTML = 'Downloading...';
+    var {normalizeAppId} = utils;
     var entry = this.searchResult.objects[evt.currentTarget.dataset.index];
     entry.name = normalizeAppId(entry.name);
+    if (this.apps[entry.name]) {
+      alert(entry.name + ' is existed.');
+      return;
+    }
+    this.searchResultContainer.innerHTML = 'Downloading...';
     var metadata = {
       'name': entry.name,
       'installOrigin': MARKETPLACE_INSTALL_ORIGIN,
@@ -252,9 +264,6 @@ var Homescreen = {
     };
 
     if (entry.is_packaged) {
-      document.getElementById('warning').innerHTML = 'Warning: Packaged app ' +
-        'can\'t be executed in Browser, you need to verify it in b2g-desktop ' +
-        'or device.';
       metadata.origin = 'app://' + entry.name;
     } else {
       var url = new URL(entry.manifest_url);
@@ -419,33 +428,12 @@ var Homescreen = {
     this.grid.insertBefore(page, this.addPageButton);
   },
 
-  // There is no etag & correct origin in metadata.json generated by variant.js
-  // because app which preload per sim card can get correct metadata by
-  // DISTRIBUTION_DIR/variant.json, so we need replace metadata which we
-  // generate in Homescreen.addAppFromMarketplace()
-  processMetadata: function hs_processMetadata(apppath, metadata) {
-    var necessaryFields = ['origin', 'manifestURL', 'installOrigin', 'etag',
-      'packageEtag'];
-    var md = {};
-    Object.keys(metadata).forEach(function(prop) {
-      if (necessaryFields.indexOf(prop) >= 0) {
-        md[prop] = metadata[prop];
-      }
-    });
-
-    var {getFile, writeContent} = buildModules.utils;
-    var metadataFile = getFile(apppath).clone();
-    metadataFile.append('metadata.json');
-    writeContent(metadataFile, JSON.stringify(md));
-  },
-
   save: function hs_save(evt) {
     var self = this;
-    if (!buildModules.utils) {
+    if (!utils) {
       throw new Error('utils module doesn\'t exist');
     }
 
-    var utils = buildModules.utils;
     var distDir = utils.getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR);
     utils.ensureFolderExists(distDir);
 
@@ -525,9 +513,10 @@ window.addEventListener('load', function() {
   Homescreen.init();
 
   Gaia.addEventListener('setupFinished', function() {
-    buildModules = Gaia.buildModules;
+    utils = Gaia.require('utils');
+    variant = Gaia.require('variant');
     Homescreen.gaiaConfig = Gaia.config;
-    var {getFile, getBuildConfig} = Gaia.buildModules.utils;
+    var {getFile, getBuildConfig} = utils;
     var configs = getBuildConfig(getFile(Gaia.config.GAIA_DIR, 'build').path);
     Homescreen.setBuildConfig(configs);
   });
@@ -568,7 +557,7 @@ window.addEventListener('load', function() {
         Homescreen.selectGaiaFolder();
       }
       Gaia.profile.remove(true);
-      buildModules.utils.ensureFolderExists(Gaia.profile);
+      utils.ensureFolderExists(Gaia.profile);
       Gaia.config.GAIA_APPDIRS = installedAppPaths.join(' ');
       Gaia.install();
       Gaia.launch();

@@ -349,7 +349,29 @@ div.lightbox .lightbox-background .closemsg, div.lightbox .lightbox-background .
   color: #A7A7A7;
 }
 
-.warning {
-  color: red;
+.noted {
+  font-size: 0.8em;
   margin: 0.5rem;
+}
+
+.marketplace-app-type {
+  position: relative;
+  float: right;
+  margin-right: 2rem;
+  width: 10rem;
+  height: 1.5rem;
+  line-height: 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.8em;
+  text-align: center;
+  color: #FFF;
+}
+
+.marketplace-app-type[data-is-packaged="true"] {
+  background-color: #204a78;
+}
+
+.marketplace-app-type[data-is-packaged="true"]:before {
+  content: "Packaged app";
+  background-color: #204a78;
 }

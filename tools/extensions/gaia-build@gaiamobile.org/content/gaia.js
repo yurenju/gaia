@@ -1,6 +1,7 @@
 var Gaia = {
   _listeners: {},
   buildModules: {},
+  require: null,
 
   loadXpcshellScript: function gaia_loadXpcshellScript(config, name) {
     let module =
@@ -13,20 +14,6 @@ var Gaia = {
       '.js', module
     );
     return module;
-  },
-
-  getAppDirs: function gaia_getAppDirs(gaiaPath) {
-    let dir = new FileUtils.File(gaiaPath);
-    dir.append('apps');
-    let files = dir.directoryEntries;
-    let apps = [];
-    while (files.hasMoreElements()) {
-      let file = files.getNext().QueryInterface(Ci.nsILocalFile);
-      if (file.isDirectory()) {
-        apps.push(file.path);
-      }
-    }
-    return apps;
   },
 
   getConfig: function gaia_getConfig(profilePath, gaiaPath) {
@@ -86,7 +73,6 @@ var Gaia = {
 
   setup: function gaia_setup(gaiaPath) {
     var self = this;
-    var require;
     if (!gaiaPath) {
       throw new Error('gaiaPath is empty');
     }
@@ -103,7 +89,7 @@ var Gaia = {
     }
 
     try {
-      require = this.loadXpcshellScript(this.config,
+      this.require = this.loadXpcshellScript(this.config,
         'xpcshell-commonjs').require;
     } catch (e) {
       throw new Error('xpcshell-commonjs doesn\'t exist, you may choose wrong' +
@@ -112,7 +98,7 @@ var Gaia = {
 
     var modules = ['utils', 'preferences', 'applications-data', 'variant',
     'webapp-manifests', 'webapp-optimize', 'webapp-zip', 'settings'];
-    modules.forEach(function(m) { self.buildModules[m] = require(m); });
+    modules.forEach(function(m) { self.buildModules[m] = self.require(m); });
 
     var evt = new CustomEvent('setupFinished');
     this.dispatchEvent(evt);
