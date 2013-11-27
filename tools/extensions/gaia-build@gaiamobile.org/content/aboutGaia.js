@@ -229,7 +229,7 @@ var Homescreen = {
     window.location.hash = '';
   },
 
-  getMetadata: function hs_getMetadata(entry) {
+  getMetadata: function hs_getMetadata(entry, manifest, callback) {
     var {normalizeAppId} = utils;
     var name = normalizeAppId(entry.name)
     var metadata = {
@@ -241,20 +241,51 @@ var Homescreen = {
 
     if (entry.is_packaged) {
       metadata.origin = 'app://' + name;
+      var xhr = new XMLHttpRequest();
+      xhr.open('HEAD', manifest.package_path, false);
+      xhr.addEventListener('load', function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status !== 200) {
+            console.warn('Get header of packaged app failed, Status Code: ' +
+              xhr.status);
+            callback(metadata);
+            return;
+          }
+
+          var etag = xhr.getResponseHeader('etag');
+          if (etag) {
+            metadata.packageEtag = etag;
+          }
+          callback(metadata);
+        }
+      });
+      xhr.send();
     } else {
       var url = new URL(entry.manifest_url);
       metadata.origin = url.origin;
+      callback(metadata);
     }
-    return metadata;
+  },
+
+  filterProperties: function hs_filterProperties(obj, names) {
+    var newObj = {};
+    for (var prop in obj) {
+      if (names.indexOf(prop) >= 0) {
+        newObj[prop] = obj[prop];
+      }
+    }
+    return newObj;
   },
 
   processAppDownload: function hs_processAppDownload(metadata, json) {
     var {getFile, ensureFolderExists} = utils;
     var {downloadApp} = variant;
+    var filteredMetadata = this.filterProperties(metadata,['origin',
+      'manifestURL', 'installOrigin', 'etag', 'packageEtag']);
     var appPath = getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR,
       EXTERNAL_APP_DIR, metadata.name);
     ensureFolderExists(appPath);
-    downloadApp(json, metadata, appPath.path, function() {
+    downloadApp(json, filteredMetadata, appPath.path, function() {
         var {getApp} = utils;
         var app = getApp(EXTERNAL_APP_DIR, metadata.name,
           this.gaiaConfig.GAIA_DIR,
@@ -266,10 +297,11 @@ var Homescreen = {
   },
 
   addAppFromMarketplace: function hs_addAppFromMarketplace(evt) {
+    var {normalizeAppId} = utils;
     var entry = this.searchResult.objects[evt.currentTarget.dataset.index];
-    var metadata = this.getMetadata(entry);
-    if (this.apps[metadata.name]) {
-      alert(metadata.name + ' is existed.');
+    var name = normalizeAppId(entry.name);
+    if (this.apps[name]) {
+      alert(name + ' is existed.');
       return;
     }
     this.searchResultContainer.innerHTML = 'Downloading...';
@@ -283,17 +315,20 @@ var Homescreen = {
           window.location.hash = '';
           return;
         }
-        var app = this.createApp({
-          'name': metadata.name,
-          'source': 'external'
-        });
-        document.getElementById('available-apps').appendChild(app);
-        var etag = xhr.getResponseHeader('etag');
-        if (etag) {
-          metadata.etag = etag;
-        }
-        this.processAppDownload(metadata,
-          JSON.parse(xhr.responseText));
+
+        var manifest = JSON.parse(xhr.responseText);
+        this.getMetadata(entry, manifest, function(metadata) {
+          var app = this.createApp({
+            'name': metadata.name,
+            'source': 'external'
+          });
+          document.getElementById('available-apps').appendChild(app);
+          var etag = xhr.getResponseHeader('etag');
+          if (etag) {
+            metadata.etag = etag;
+          }
+          this.processAppDownload(metadata, manifest);
+        }.bind(this));
       }
     }.bind(this));
     xhr.send();
