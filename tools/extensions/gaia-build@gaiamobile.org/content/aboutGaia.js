@@ -85,7 +85,7 @@ var Homescreen = {
         self.showSearchResult(self.searchResult);
       } else {
         var msg = 'Marketplace search request failed';
-        alert(msg)
+        alert(msg);
         throw new Error(msg);
       }
     });
@@ -121,15 +121,15 @@ var Homescreen = {
       elements[key] = el;
     }
 
-    elements.name.innerHTML = obj.name;
-    elements.author.innerHTML = obj.author;
+    elements.name.textContent = obj.name;
+    elements.author.textContent = obj.author;
     elements.icon.src = obj.icons['64'];
     var ratings = Math.round(obj.ratings.average);
     elements.ratings.innerHTML = new Array(ratings + 1).join('&#9733;');
     var len = elements.ratings.innerHTML.length;
     elements.ratings.innerHTML += new Array(FULL_STARS - len + 1).join('&#9734;');
     elements.ratings.dataset.average = obj.ratings.average;
-    elements.review.innerHTML = obj.ratings.count + ' reviews';
+    elements.review.textContent = obj.ratings.count + ' reviews';
     elements.type.dataset.isPackaged = obj.is_packaged;
 
     container.dataset.index = index;
@@ -229,46 +229,50 @@ var Homescreen = {
     window.location.hash = '';
   },
 
-  processAppDownload: function hs_processAppDownload(metadata, json) {
-    var {getFile, normalizeAppId, ensureFolderExists} = utils;
-    var {downloadApp} = variant;
-    var appId = normalizeAppId(json.name);
-    var appPath = getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR,
-      EXTERNAL_APP_DIR, appId);
-    ensureFolderExists(appPath);
-    downloadApp(metadata.manifestURL, json, appPath.path, appId,
-      metadata.origin, metadata.installOrigin, metadata, function() {
-        var {getApp} = utils;
-        var app = getApp(EXTERNAL_APP_DIR, appId,
-          this.gaiaConfig.GAIA_DIR,
-          this.gaiaConfig.GAIA_DISTRIBUTION_DIR);
-        this.apps[appId] = app;
-        window.location.hash = '';
-    }.bind(this));
-  },
-
-  addAppFromMarketplace: function hs_addAppFromMarketplace(evt) {
+  getMetadata: function hs_getMetadata(entry) {
     var {normalizeAppId} = utils;
-    var entry = this.searchResult.objects[evt.currentTarget.dataset.index];
-    entry.name = normalizeAppId(entry.name);
-    if (this.apps[entry.name]) {
-      alert(entry.name + ' is existed.');
-      return;
-    }
-    this.searchResultContainer.innerHTML = 'Downloading...';
+    var name = normalizeAppId(entry.name)
     var metadata = {
-      'name': entry.name,
+      'name': name,
       'installOrigin': MARKETPLACE_INSTALL_ORIGIN,
       'manifestURL': entry.manifest_url,
       'source': 'external'
     };
 
     if (entry.is_packaged) {
-      metadata.origin = 'app://' + entry.name;
+      metadata.origin = 'app://' + name;
     } else {
       var url = new URL(entry.manifest_url);
       metadata.origin = url.origin;
     }
+    return metadata;
+  },
+
+  processAppDownload: function hs_processAppDownload(metadata, json) {
+    var {getFile, ensureFolderExists} = utils;
+    var {downloadApp} = variant;
+    var appPath = getFile(this.gaiaConfig.GAIA_DISTRIBUTION_DIR,
+      EXTERNAL_APP_DIR, metadata.name);
+    ensureFolderExists(appPath);
+    downloadApp(json, metadata, appPath.path, function() {
+        var {getApp} = utils;
+        var app = getApp(EXTERNAL_APP_DIR, metadata.name,
+          this.gaiaConfig.GAIA_DIR,
+          this.gaiaConfig.GAIA_DISTRIBUTION_DIR);
+        app.metadata = metadata;
+        this.apps[metadata.name] = app;
+        window.location.hash = '';
+    }.bind(this));
+  },
+
+  addAppFromMarketplace: function hs_addAppFromMarketplace(evt) {
+    var entry = this.searchResult.objects[evt.currentTarget.dataset.index];
+    var metadata = this.getMetadata(entry);
+    if (this.apps[metadata.name]) {
+      alert(metadata.name + ' is existed.');
+      return;
+    }
+    this.searchResultContainer.innerHTML = 'Downloading...';
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', entry.manifest_url, false);
@@ -279,12 +283,14 @@ var Homescreen = {
           window.location.hash = '';
           return;
         }
-        var app = this.createApp(metadata);
+        var app = this.createApp({
+          'name': metadata.name,
+          'source': 'external'
+        });
         document.getElementById('available-apps').appendChild(app);
         var etag = xhr.getResponseHeader('etag');
         if (etag) {
           metadata.etag = etag;
-          app.dataset.etag = etag;
         }
         this.processAppDownload(metadata,
           JSON.parse(xhr.responseText));
