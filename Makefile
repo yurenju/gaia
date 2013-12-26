@@ -219,7 +219,7 @@ BUILDDIR := file://$(CURDIR)/build/
 endif
 
 ifndef GAIA_APP_CONFIG
-GAIA_APP_CONFIG=build$(SEP)apps-$(GAIA_APP_TARGET).list
+GAIA_APP_CONFIG=build$(SEP)data$(SEP)apps-$(GAIA_APP_TARGET).list
 endif
 
 ifndef GAIA_DISTRIBUTION_DIR
@@ -233,7 +233,7 @@ else
 	endif
 endif
 
-SETTINGS_PATH := build/custom-settings.json
+SETTINGS_PATH := build/data/custom-settings.json
 ifdef GAIA_DISTRIBUTION_DIR
 	DISTRIBUTION_SETTINGS := $(GAIA_DISTRIBUTION_DIR)$(SEP)settings.json
 	DISTRIBUTION_CONTACTS := $(GAIA_DISTRIBUTION_DIR)$(SEP)contacts.json
@@ -430,7 +430,7 @@ optimize-clean: webapp-zip install-xulrunner-sdk
 	@$(call run-js-command, optimize-clean)
 
 # Get additional extensions
-$(PROFILE_FOLDER)/installed-extensions.json: build/additional-extensions.json $(wildcard .build/custom-extensions.json)
+$(PROFILE_FOLDER)/installed-extensions.json: build/data/additional-extensions.json $(wildcard .build/data/custom-extensions.json)
 ifeq ($(SIMULATOR),1)
 	# Prevent installing external firefox helper addon for the simulator
 else ifeq ($(DESKTOP),1)
@@ -603,7 +603,7 @@ PARTNER_PREF_FILES = \
 preferences: profile-dir install-xulrunner-sdk
 ifeq ($(BUILD_APP_NAME),*)
 	@$(call run-js-command, preferences)
-	@$(foreach prefs_file,$(addprefix build/,$(EXTENDED_PREF_FILES)),\
+	@$(foreach prefs_file,$(addprefix build/data/,$(EXTENDED_PREF_FILES)),\
 	  if [ -f $(prefs_file) ]; then \
 	    cat $(prefs_file) >> $(PROFILE_FOLDER)/user.js; \
 	  fi; \
