@@ -317,7 +317,9 @@ function getDistributionFileContent(name, defaultContent, distDir) {
       return getFileContent(distributionFile);
     }
   }
-  return JSON.stringify(defaultContent, null, '  ');
+  return defaultContent !== null
+    ? JSON.stringify(defaultContent, null, '  ')
+    : null;
 }
 
 function resolve(path, gaiaDir) {

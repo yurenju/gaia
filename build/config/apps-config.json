@@ -1,0 +1,15 @@
+{
+  "sms": { "blacklist": ["4850", "7000"] },
+  "sensors": { "ambientLight": true },
+  "network": {
+    "types": [
+      "wcdma/gsm", "gsm", "wcdma", "wcdma/gsm-auto", "cdma/evdo", "cdma",
+      "evdo", "wcdma/gsm/cdma/evdo"
+    ]
+  },
+  "icc": {
+    "defaultURL": "http://www.mozilla.org/en-US/firefoxos/"
+  },
+  "wapuaprof": {},
+  "wappush": { "whitelist": [] }
+}
