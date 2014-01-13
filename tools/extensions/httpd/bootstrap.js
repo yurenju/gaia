@@ -42,6 +42,7 @@ function startup(data, reason) {
 
   let DEBUG = false;
   let l10nManager, utils;
+  let notExistsFiles = [];
   function debug(data) {
     if (!DEBUG)
       return;
@@ -66,7 +67,7 @@ function startup(data, reason) {
   function registerPropertiesFile(file, webapp, server, isShared) {
     let matched = file.leafName.match(RE_EN_PROP)
     let parent = webapp.sourceDirectoryFile.parent.leafName;
-    l10nManager.locales.forEach(function(lang) {
+    Object.keys(l10nManager.locales).forEach(function(lang) {
       if (lang === 'en-US') {
         return;
       }
@@ -79,8 +80,11 @@ function startup(data, reason) {
       let propFile = l10nManager.getPropertiesFile(webapp, propFilePath);
       if (propFile.exists()) {
         server.registerFile(relativePath, propFile);
-      } else {
+      } else if (lang === l10nManager.PSEUDO_LANG) {
+        server.registerPathHandler(relativePath, LocalizationHandler);
+      } else if (notExistsFiles.indexOf(propFile.path) === -1) {
         dump("properties file not found: " + propFile.path + "\n");
+        notExistsFiles.push(propFile.path);
       }
     });
   }
@@ -112,70 +116,72 @@ function startup(data, reason) {
       }
     });
 
-    if (LOCALE_BASEDIR) {
-      let appDirs = GAIA_APPDIRS.split(' ');
-      let commonjs = {
-        GAIA_BUILD_DIR: 'file://' + GAIA_DIR.replace(/\\/g, '/') + '/build/'
+    // Initial L10nmanager
+    let commonjs = {
+      GAIA_BUILD_DIR: 'file://' + GAIA_DIR.replace(/\\/g, '/') + '/build/'
+    };
+    // Loading |require| then we can use build scripts of gaia.
+    Services.scriptloader.loadSubScript(commonjs.GAIA_BUILD_DIR +
+      '/xpcshell-commonjs.js', commonjs);
+    utils = commonjs.require('./utils');
+    let multilocale = commonjs.require('./multilocale');
+    l10nManager = new multilocale.L10nManager(GAIA_DIR,
+      utils.joinPath(GAIA_DIR, 'shared'), LOCALES_FILE, LOCALE_BASEDIR);
+    l10nManager.enablePseudo();
+
+    let appDirs = GAIA_APPDIRS.split(' ');
+    let filesInShared = utils.ls(utils.getFile(l10nManager.sharedDir), true);
+    let localesFile = utils.resolve(LOCALES_FILE, GAIA_DIR);
+
+    // Finding out which file we need to handle.
+    appDirs.forEach(function(appDir) {
+      let appDirFile = utils.getFile(appDir);
+      let parent = appDirFile.parent.leafName;
+      let webapp = {
+        buildDirectoryFile: appDirFile,
+        sourceDirectoryFile: appDirFile
       };
-      // Loading |require| then we can use build scripts of gaia.
-      Services.scriptloader.loadSubScript(commonjs.GAIA_BUILD_DIR +
-        '/xpcshell-commonjs.js', commonjs);
-      utils = commonjs.require('./utils');
-      let multilocale = commonjs.require('./multilocale');
-      l10nManager = new multilocale.L10nManager(GAIA_DIR,
-        utils.joinPath(GAIA_DIR, 'shared'), LOCALES_FILE, LOCALE_BASEDIR);
-      let filesInShared = utils.ls(utils.getFile(l10nManager.sharedDir), true);
-      let localesFile = utils.resolve(LOCALES_FILE, GAIA_DIR);
+      utils.ls(appDirFile, true).forEach(function(fileInApp) {
+        let matched = fileInApp.leafName.match(RE_EN_PROP);
+        if (matched) {
+          registerPropertiesFile(fileInApp, webapp, server);
+          return;
+        }
 
-      // Finding out which file we need to handle.
-      appDirs.forEach(function(appDir) {
-        let appDirFile = utils.getFile(appDir);
-        let parent = appDirFile.parent.leafName;
-        let webapp = {
-          buildDirectoryFile: appDirFile,
-          sourceDirectoryFile: appDirFile
-        };
-        utils.ls(appDirFile, true).forEach(function(fileInApp) {
-          let matched = fileInApp.leafName.match(RE_EN_PROP)
-          if (matched) {
-            registerPropertiesFile(fileInApp, webapp, server);
-            return;
-          }
-
-          let fname = fileInApp.leafName;
-          // localized ini and manifest files will be generated in runtime
-          // so we need handle path if client request those files.
-          // and we use "LocalizationHandler" to handle them.
-          if (fname.contains('.ini') || fname.contains('manifest.webapp')) {
-            let relativePath = fileInApp.path.substr(GAIA_DIR.length);
-            server.registerPathHandler(relativePath, LocalizationHandler);
-            return;
-          }
-        });
-
-        // register all manifest, ini and properties files in shared folder for
-        // each app.
-        filesInShared.forEach(function(fileInShared) {
-          let matched = fileInShared.leafName.match(RE_EN_PROP);
-          if (matched) {
-            registerPropertiesFile(fileInShared, webapp, server, true);
-            return;
-          }
-          let fname = fileInShared.leafName;
-          if (fname.contains('.ini') || fname.contains('manifest.webapp')) {
-            // we added '../..' for matching path which is processed in httpd.js
-            // please reference _processHeaders in httpd.js
-            let relativePath = '/' + parent + '/' +
-              webapp.sourceDirectoryFile.leafName + '/../..' +
-              fileInShared.path.substr(GAIA_DIR.length);
-            server.registerPathHandler(relativePath, LocalizationHandler);
-          }
-        });
-        // languages.json
-        server.registerFile('/' + parent + '/' + appDirFile.leafName +
-          '/../../shared/resources/languages.json', localesFile);
+        let fname = fileInApp.leafName;
+        // localized ini and manifest files will be generated in runtime
+        // so we need handle path if client request those files.
+        // and we use "LocalizationHandler" to handle them.
+        if (fname.contains('.ini') || fname.contains('manifest.webapp')) {
+          let relativePath = fileInApp.path.substr(GAIA_DIR.length);
+          server.registerPathHandler(relativePath, LocalizationHandler);
+          return;
+        }
       });
-    }
+
+      // register all manifest, ini and properties files in shared folder for
+      // each app.
+      filesInShared.forEach(function(fileInShared) {
+        let matched = fileInShared.leafName.match(RE_EN_PROP);
+        if (matched) {
+          registerPropertiesFile(fileInShared, webapp, server, true);
+          return;
+        }
+        let fname = fileInShared.leafName;
+        if (fname.contains('.ini') || fname.contains('manifest.webapp')) {
+          // we added '../..' for matching path which is processed in httpd.js
+          // please reference _processHeaders in httpd.js
+          let relativePath = '/' + parent + '/' +
+            webapp.sourceDirectoryFile.leafName + '/../..' +
+            fileInShared.path.substr(GAIA_DIR.length);
+          server.registerPathHandler(relativePath, LocalizationHandler);
+        }
+      });
+      // languages.json
+      let langFilePath = '/' + parent + '/' + appDirFile.leafName +
+        '/../../shared/resources/languages.json';
+      server.registerPathHandler(langFilePath, LangFileHandler);
+    });
 
     server.registerPathHandler('/marionette', MarionetteHandler);
   }
@@ -268,12 +274,25 @@ function startup(data, reason) {
     }
   };
 
+  var LangFileHandler = {
+    handle: function lf_handle(request, response) {
+      if (request.method === 'GET') {
+        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+        let body = JSON.stringify(l10nManager.locales);
+        // nsIHttpResponse.write will try to convert binary string to ASCII, so
+        // use |unescape(encodeURIComponent(body))| to encode a utf8 string then
+        // covert to binary string.
+        response.write(unescape(encodeURIComponent(body)));
+      }
+    }
+  }
+
   var LocalizationHandler = {
     // we only handle GET method because we always use GET method to get those
     // files.
     handle: function lh_handle(request, response) {
       if (request.method === 'GET' && l10nManager) {
-        let locales = JSON.parse(JSON.stringify(l10nManager.locales));
+        let locales = Object.keys(l10nManager.locales);
         // no need to handle en-US.
         var enIndex = locales.indexOf('en-US');
         if (enIndex !== -1) {
@@ -296,7 +315,12 @@ function startup(data, reason) {
             sourceDirectoryName: file.parent.leafName
           };
           let manifest = l10nManager.localizeManifest(webapp);
+          dump("JSON.stringify(manifest): " + JSON.stringify(manifest) + "\n");
           response.write(JSON.stringify(manifest));
+        } else if (file.leafName.contains('.' + l10nManager.PSEUDO_LANG + '.properties')) {
+          response.setHeader('Content-Type', 'text/plain');
+          let content = l10nManager.getPseudoContent(file.path);
+          response.write(unescape(encodeURIComponent(content)));
         }
       }
     }

@@ -1,6 +1,7 @@
 var assert = require('chai').assert;
 var fs = require('fs');
 var AdmZip = require('adm-zip');
+var path = require('path');
 
 function getPrefsSandbox() {
   var sandbox = {
@@ -61,9 +62,27 @@ function checkFileInZip(zipPath, pathInZip, expectedPath) {
   assert.deepEqual(actual, expected);
 }
 
+function checkLocalesObjInSettingsZip() {
+  var settingsZipPath = path.join(process.cwd(), 'profile', 'webapps',
+    'settings.gaiamobile.org', 'application.zip');
+  var zhtwPathInZip = 'locales-obj/zh-TW.json';
+  var zhtwSettingsTranslation = fs.readFileSync(path.join('apps', 'settings',
+    'locales', 'settings.zh-TW.properties'), 'utf8')
+    .match(/settings=(.+)/)[1];
+  var zip = new AdmZip(settingsZipPath);
+  var zhtwEntry = zip.getEntry(zhtwPathInZip);
+  assert.isNotNull(zhtwEntry,
+    'cancat file ' + zhtwPathInZip + ' should exist');
+  var zhtwLocaleObj = JSON.parse(zip.readAsText(zhtwPathInZip));
+  assert.equal(zhtwLocaleObj.settings._, zhtwSettingsTranslation,
+    'translation of "settings" in cancat file equal same string in ' +
+    'settings.zh-TW.properties');
+}
+
 exports.getPrefsSandbox = getPrefsSandbox;
 exports.checkError = checkError;
 exports.checkSettings = checkSettings;
 exports.checkPrefs = checkPrefs;
 exports.checkWebappsScheme = checkWebappsScheme;
 exports.checkFileInZip = checkFileInZip;
+exports.checkLocalesObjInSettingsZip = checkLocalesObjInSettingsZip;

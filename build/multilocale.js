@@ -2,6 +2,7 @@
 
 const { Cc, Ci, Cr, Cu } = require('chrome');
 Cu.import('resource://gre/modules/osfile.jsm');
+Cu.import('resource://gre/modules/Services.jsm');
 
 const utils = require('./utils');
 const webappZip = require('./webapp-zip');
@@ -10,6 +11,9 @@ const RE_IMPORT_LINE = /@import url\((.*)\)/;
 const RE_PROPERTY_LINE = /(.*)\s*[:=]\s*(.*)/;
 const RE_INI_FILE = /locales[\/\\].+\.ini$/;
 const MODNAME = 'multilocale';
+const PSEUDO_LANG = 'zz-ZZ';
+const EN_LANG = 'en-US';
+const PSEUDO_LANG_DESC = 'Accented English';
 
 // Make all timestamps the same so we always generate the same
 // output zip file for the same inputs
@@ -19,24 +23,43 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
   function checkArg(arg) {
     return new Boolean(arg);
   }
-  if (arguments.length !== 4 &&
+  if (arguments.length < 3 &&
     !Array.prototype.every.call(arguments, checkArg)) {
     throw new TypeError('Illegal constructor');
   }
 
   var self = this;
+  var baseDir;
   var localesFile = utils.resolve(localesFilePath, gaiaDir);
-  var baseDir = utils.resolve(localeBasedir, gaiaDir);
+  var dirs = [utils.getFile(gaiaDir), utils.getFile(sharedDir), localesFile];
 
-  [utils.getFile(gaiaDir), utils.getFile(sharedDir), localesFile, baseDir]
-  .forEach(function(file) {
+  if (localeBasedir) {
+    baseDir = utils.resolve(localeBasedir, gaiaDir);
+    dirs.push(baseDir);
+    localeBasedir = baseDir.path;
+  } else {
+    localeBasedir = null;
+  }
+
+  dirs.forEach(function(file) {
     if (!file.exists()) {
       throw new Error('file not found: ' + file.path);
     }
   });
 
   [this.locales, this.localeBasedir, this.gaiaDir, this.sharedDir] =
-    [Object.keys(utils.getJSON(localesFile)), baseDir.path, gaiaDir, sharedDir];
+    [utils.getJSON(localesFile), localeBasedir, gaiaDir, sharedDir];
+
+  // Initial mozL10n
+  let win = { navigator: {} };
+  win.console = {
+    log: function(str) {
+      dump(str + '\n');
+    }
+  }
+  Services.scriptloader.loadSubScript('file:///' + gaiaDir +
+    '/shared/js/l10n.js?reload=' + new Date().getTime(), win);
+  let mozL10n = win.navigator.mozL10n;
 
 
   /**
@@ -111,8 +134,11 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
    * @param {String}       IniPathInZip - INI file path in zip
    */
   function localizeIni(zip, iniFile, webapp, IniPathInZip) {
-    var localesClone = JSON.parse(JSON.stringify(self.locales));
+    if (!self.localeBasedir) {
+      return;
+    }
 
+    var localesClone = Object.keys(JSON.parse(JSON.stringify(self.locales)));
     var enIndex = localesClone.indexOf('en-US');
     if (enIndex !== -1) {
       localesClone.splice(enIndex, 1);
@@ -173,6 +199,10 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
     var paths = [self.localeBasedir, locale];
 
     originalPath = OS.Path.normalize(originalPath);
+
+    if (!self.localeBasedir) {
+      return utils.getFile(originalPath);
+    }
 
     if (isShared) {
       // for shared directory, we need to change a path like:
@@ -235,6 +265,10 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
    *                                   GAIA_CONCAT_LOCALES is "1"
    */
   function localize(files, zip, webapp, inlineOrConcat) {
+    if (!self.localeBasedir) {
+      return;
+    }
+
     // Using manifest.properties to localize manifest.webapp
     var manifest = localizeManifest(webapp);
     if (zip.hasEntry('manifest.webapp')) {
@@ -265,7 +299,22 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
    */
   function localizeManifest(webapp) {
     var localesProps = [];
-    var localesForManifest = self.locales.filter(function(locale) {
+    var originalManifest = JSON.parse(JSON.stringify(webapp.manifest));
+    if (PSEUDO_LANG in self.locales) {
+      if (originalManifest.locales && originalManifest.locales['en-US']) {
+        var pseudoLocale = {};
+        var enLocale = originalManifest.locales['en-US'];
+        pseudoLocale.name = transform(enLocale.name);
+        pseudoLocale.description = transform(enLocale.description);
+        originalManifest.locales[PSEUDO_LANG] = pseudoLocale;
+      }
+    }
+
+    if (!self.localeBasedir) {
+      return originalManifest;
+    }
+
+    var localesForManifest = Object.keys(self.locales).filter(function(locale) {
       var parent = webapp.sourceDirectoryFile.parent.leafName;
       var propFile = utils.getFile(self.localeBasedir, locale, parent,
         webapp.sourceDirectoryName, 'manifest.properties');
@@ -284,7 +333,7 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
     });
 
     var manifest = addLocaleManifest(localesForManifest, localesProps,
-      utils.getJSON(webapp.manifestFile));
+      originalManifest);
     return manifest;
   }
 
@@ -404,6 +453,50 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
     // utils.log('multilocale', msg);
   }
 
+  /**
+   * Enable pseudo language
+   */
+  function enablePseudo() {
+    self.locales[PSEUDO_LANG] = PSEUDO_LANG_DESC;
+  }
+
+  function getPseudoContent(path) {
+    let enFile = utils.getFile(path.replace(PSEUDO_LANG, EN_LANG));
+    var content = mozL10n.parseProperties(utils.getFileContent(enFile), null, EN_LANG);
+
+    let postdata = [];
+    for (let k in content) {
+      let val = content[k];
+      let special = false;
+      postdata.push(k + ' = ');
+      for (let segment of val.split(/({{.*?}}|{\[.*?\]}|%[A-Za-z])/)) {
+        if (special) {
+          postdata.push(segment);
+        }
+        else {
+          var t = transform(segment);
+          postdata.push(transform(segment));
+        }
+        special = !special;
+      }
+      postdata.push('\n');
+    }
+
+    return postdata.join('');
+  }
+
+  const REWRITE_UNICODE_MAP = "ȦƁƇḒḖƑƓĦĪĴĶĿḾȠǾƤɊŘŞŦŬṼẆẊẎẐ" + "[\\]^_`" + "ȧƀƈḓḗƒɠħīĵķŀḿƞǿƥɋřşŧŭṽẇẋẏẑ"
+  function transform(segment) {
+    return segment.replace(/[A-z]/g,
+     function(c) {
+       let cc = c.charCodeAt(0) - 65;
+       if (cc >= 0 && cc < REWRITE_UNICODE_MAP.length){
+         return REWRITE_UNICODE_MAP[cc];
+       }
+       return c;
+     });
+  }
+
   this.modifyLocaleIni = modifyLocaleIni;
   this.localizeIni = localizeIni;
   this.getPropertiesFile = getPropertiesFile;
@@ -411,6 +504,9 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
   this.localize = localize;
   this.localizeManifest = localizeManifest;
   this.serializeIni = serializeIni;
+  this.enablePseudo = enablePseudo;
+  this.getPseudoContent = getPseudoContent;
+  this.PSEUDO_LANG = PSEUDO_LANG;
 }
 
 exports.L10nManager = L10nManager;

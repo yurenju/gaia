@@ -98,6 +98,7 @@ suite('Build Integration tests', function() {
       helper.checkPrefs(sandbox.prefs, expectedPrefs);
       helper.checkWebappsScheme(webapps);
       helper.checkFileInZip(zipPath, pathInZip, expectedBrandingPath);
+      helper.checkLocalesObjInSettingsZip();
 
       done();
     });

@@ -177,6 +177,131 @@
     window.dispatchEvent(evtObject);
   }
 
+  // load the specified resource file
+  function loadResource(url, onSuccess, onFailure, asynchronous) {
+    onSuccess = onSuccess || function _onSuccess(data) {};
+    onFailure = onFailure || function _onFailure() {
+      consoleWarn(url + ' not found.');
+    };
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, asynchronous);
+    if (xhr.overrideMimeType) {
+      xhr.overrideMimeType('text/plain; charset=utf-8');
+    }
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200 || xhr.status === 0) {
+          onSuccess(xhr.responseText);
+        } else {
+          onFailure();
+        }
+      }
+    };
+    xhr.onerror = onFailure;
+    xhr.ontimeout = onFailure;
+
+    // in Firefox OS with the app:// protocol, trying to XHR a non-existing
+    // URL will raise an exception here -- hence this ugly try...catch.
+    try {
+      xhr.send(null);
+    } catch (e) {
+      onFailure();
+    }
+  }
+
+  // parse *.properties text data into an l10n dictionary
+  function parseProperties(text, baseURL, lang) {
+    // handle escaped characters (backslashes) in a string
+    function evalString(text) {
+      if (text.lastIndexOf('\\') < 0) {
+        return text;
+      }
+      return text.replace(/\\\\/g, '\\')
+                 .replace(/\\n/g, '\n')
+                 .replace(/\\r/g, '\r')
+                 .replace(/\\t/g, '\t')
+                 .replace(/\\b/g, '\b')
+                 .replace(/\\f/g, '\f')
+                 .replace(/\\{/g, '{')
+                 .replace(/\\}/g, '}')
+                 .replace(/\\"/g, '"')
+                 .replace(/\\'/g, "'");
+    }
+
+    // import another *.properties file
+    function loadImport(url) {
+      loadResource(url, function(content) {
+        parseRawLines(content, false); // don't allow recursive imports
+      }, null, false); // load synchronously
+    }
+
+    var dictionary = [];
+
+    // token expressions
+    var reBlank = /^\s*|\s*$/;
+    var reComment = /^\s*#|^\s*$/;
+    var reSection = /^\s*\[(.*)\]\s*$/;
+    var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
+    var reSplit = /^([^=\s]*)\s*=\s*(.+)$/;
+    var reUnicode = /\\u([0-9a-fA-F]{1,4})/g;
+    var reMultiline = /[^\\]\\$/;
+
+    // parse the *.properties file into an associative array
+    function parseRawLines(rawText, extendedSyntax) {
+      var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
+      var currentLang = '*';
+      var genericLang = lang.replace(/-[a-z]+$/i, '');
+      var skipLang = false;
+      var match = '';
+
+      for (var i = 0; i < entries.length; i++) {
+        var line = entries[i];
+
+        // comment or blank line?
+        if (reComment.test(line)) {
+          continue;
+        }
+
+        // multi-line?
+        while (reMultiline.test(line) && i < entries.length) {
+          line = line.slice(0, line.length - 1) +
+            entries[++i].replace(reBlank, '');
+        }
+
+        // the extended syntax supports [lang] sections and @import rules
+        if (extendedSyntax) {
+          if (reSection.test(line)) { // section start?
+            match = reSection.exec(line);
+            currentLang = match[1];
+            skipLang = (currentLang !== '*') &&
+                (currentLang !== lang) && (currentLang !== genericLang);
+            continue;
+          } else if (skipLang) {
+            continue;
+          }
+          if (reImport.test(line)) { // @import rule?
+            match = reImport.exec(line);
+            loadImport(baseURL + match[1]); // load the resource synchronously
+          }
+        }
+
+        // key-value pair
+        var tmp = line.match(reSplit);
+        if (tmp && tmp.length == 3) {
+          // unescape unicode char codes if needed (e.g. '\u00a0')
+          var val = tmp[2].replace(reUnicode, function(match, token) {
+            return unescape('%u' + '0000'.slice(token.length) + token);
+          });
+          dictionary[tmp[1]] = evalString(val);
+        }
+      }
+    }
+
+    // fill the dictionary
+    parseRawLines(text, true);
+    return dictionary;
+  }
 
   /**
    * l10n resource parser:
@@ -204,138 +329,12 @@
   function parseResource(href, lang, successCallback, failureCallback) {
     var baseURL = href.replace(/\/[^\/]*$/, '/');
 
-    // handle escaped characters (backslashes) in a string
-    function evalString(text) {
-      if (text.lastIndexOf('\\') < 0) {
-        return text;
-      }
-      return text.replace(/\\\\/g, '\\')
-                 .replace(/\\n/g, '\n')
-                 .replace(/\\r/g, '\r')
-                 .replace(/\\t/g, '\t')
-                 .replace(/\\b/g, '\b')
-                 .replace(/\\f/g, '\f')
-                 .replace(/\\{/g, '{')
-                 .replace(/\\}/g, '}')
-                 .replace(/\\"/g, '"')
-                 .replace(/\\'/g, "'");
-    }
-
-    // parse *.properties text data into an l10n dictionary
-    function parseProperties(text) {
-      var dictionary = [];
-
-      // token expressions
-      var reBlank = /^\s*|\s*$/;
-      var reComment = /^\s*#|^\s*$/;
-      var reSection = /^\s*\[(.*)\]\s*$/;
-      var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
-      var reSplit = /^([^=\s]*)\s*=\s*(.+)$/;
-      var reUnicode = /\\u([0-9a-fA-F]{1,4})/g;
-      var reMultiline = /[^\\]\\$/;
-
-      // parse the *.properties file into an associative array
-      function parseRawLines(rawText, extendedSyntax) {
-        var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
-        var currentLang = '*';
-        var genericLang = lang.replace(/-[a-z]+$/i, '');
-        var skipLang = false;
-        var match = '';
-
-        for (var i = 0; i < entries.length; i++) {
-          var line = entries[i];
-
-          // comment or blank line?
-          if (reComment.test(line)) {
-            continue;
-          }
-
-          // multi-line?
-          while (reMultiline.test(line) && i < entries.length) {
-            line = line.slice(0, line.length - 1) +
-              entries[++i].replace(reBlank, '');
-          }
-
-          // the extended syntax supports [lang] sections and @import rules
-          if (extendedSyntax) {
-            if (reSection.test(line)) { // section start?
-              match = reSection.exec(line);
-              currentLang = match[1];
-              skipLang = (currentLang !== '*') &&
-                  (currentLang !== lang) && (currentLang !== genericLang);
-              continue;
-            } else if (skipLang) {
-              continue;
-            }
-            if (reImport.test(line)) { // @import rule?
-              match = reImport.exec(line);
-              loadImport(baseURL + match[1]); // load the resource synchronously
-            }
-          }
-
-          // key-value pair
-          var tmp = line.match(reSplit);
-          if (tmp && tmp.length == 3) {
-            // unescape unicode char codes if needed (e.g. '\u00a0')
-            var val = tmp[2].replace(reUnicode, function(match, token) {
-              return unescape('%u' + '0000'.slice(token.length) + token);
-            });
-            dictionary[tmp[1]] = evalString(val);
-          }
-        }
-      }
-
-      // import another *.properties file
-      function loadImport(url) {
-        loadResource(url, function(content) {
-          parseRawLines(content, false); // don't allow recursive imports
-        }, null, false); // load synchronously
-      }
-
-      // fill the dictionary
-      parseRawLines(text, true);
-      return dictionary;
-    }
-
-    // load the specified resource file
-    function loadResource(url, onSuccess, onFailure, asynchronous) {
-      onSuccess = onSuccess || function _onSuccess(data) {};
-      onFailure = onFailure || function _onFailure() {
-        consoleWarn(url + ' not found.');
-      };
-
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, asynchronous);
-      if (xhr.overrideMimeType) {
-        xhr.overrideMimeType('text/plain; charset=utf-8');
-      }
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          if (xhr.status == 200 || xhr.status === 0) {
-            onSuccess(xhr.responseText);
-          } else {
-            onFailure();
-          }
-        }
-      };
-      xhr.onerror = onFailure;
-      xhr.ontimeout = onFailure;
-
-      // in Firefox OS with the app:// protocol, trying to XHR a non-existing
-      // URL will raise an exception here -- hence this ugly try...catch.
-      try {
-        xhr.send(null);
-      } catch (e) {
-        onFailure();
-      }
-    }
-
     // load and parse l10n data (warning: global variables are used here)
     loadResource(href, function(response) {
       if (/\.json$/.test(href)) {
         gL10nData = JSON.parse(response); // TODO: support multiple JSON files
       } else { // *.ini or *.properties file
-        var data = parseProperties(response);
+        var data = parseProperties(response, baseURL, lang);
         for (var key in data) {
           var id, prop, nestedProp, index = key.lastIndexOf('.');
           if (index > 0) { // a property name has been specified
@@ -1221,6 +1220,8 @@
 
     // get (a part of) the dictionary for the current locale
     getDictionary: getSubDictionary,
+
+    parseProperties: parseProperties,
 
     // this can be used to prevent race conditions
     get readyState() { return gReadyState; },

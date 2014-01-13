@@ -449,13 +449,10 @@ function execute(options) {
         }
       });
 
-    if (gaia.l10nManager) {
-      // Only localize app manifest file if we inlined properties files.
-      var inlineOrConcat = (config.GAIA_INLINE_LOCALES === '1' ||
-        config.GAIA_CONCAT_LOCALES === '1');
-      gaia.l10nManager.localize(files, zip, webapp, inlineOrConcat)
-    }
-
+    // Only localize app manifest file if we inlined properties files.
+    var inlineOrConcat = (config.GAIA_INLINE_LOCALES === '1' ||
+      config.GAIA_CONCAT_LOCALES === '1');
+    gaia.l10nManager.localize(files, zip, webapp, inlineOrConcat);
 
     // Look for gaia_shared.json in case app uses resources not specified
     // in HTML
@@ -500,11 +497,7 @@ function execute(options) {
 
       // Add the .ini file
       var pathInZip = 'shared/locales/' + name + '.ini';
-      if (!gaia.l10nManager) {
-        addToZip(zip, pathInZip, ini);
-      } else {
-        gaia.l10nManager.localizeIni(zip, ini, webapp, pathInZip);
-      }
+      gaia.l10nManager.localizeIni(zip, ini, webapp, pathInZip);
 
       // And the locale folder itself
       addToZip(zip, '/shared/locales/' + name, localeFolder);

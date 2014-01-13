@@ -279,14 +279,16 @@ function getGaia(options) {
     distributionDir: options.GAIA_DISTRIBUTION_DIR
   };
 
-  if (options.LOCALE_BASEDIR) {
-    // Bug 952901: remove getLocaleBasedir() if bug 952900 fixed.
-    var localeBasedir = getLocaleBasedir(options.LOCALE_BASEDIR);
-    gaia.l10nManager = new multilocale.L10nManager(
-      options.GAIA_DIR,
-      gaia.sharedFolder.path,
-      options.LOCALES_FILE,
-      localeBasedir);
+  // Bug 952901: remove getLocaleBasedir() if bug 952900 fixed.
+  var localeBasedir = getLocaleBasedir(options.LOCALE_BASEDIR);
+  gaia.l10nManager = new multilocale.L10nManager(
+    options.GAIA_DIR,
+    gaia.sharedFolder.path,
+    options.LOCALES_FILE,
+    localeBasedir);
+
+  if (options.PRODUCTION === '0') {
+    gaia.l10nManager.enablePseudo();
   }
 
   return gaia;

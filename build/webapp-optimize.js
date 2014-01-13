@@ -104,13 +104,11 @@ function optimize_getFileContent(webapp, htmlFile, relativePath) {
     // we inject extended locales to localization manifest (locales.ini) files
     if (RE_INI.test(file.path)) {
       content = utils.getFileContent(file);
-      if (gaia.l10nManager) {
-        var ini = gaia.l10nManager.modifyLocaleIni(content, l10nLocales);
-        content = gaia.l10nManager.serializeIni(ini);
-      }
+      var ini = gaia.l10nManager.modifyLocaleIni(content, l10nLocales);
+      content = gaia.l10nManager.serializeIni(ini);
     // we substitute the localization properties file from gaia with the ones
     // from LOCALE_BASEDIR
-    } else if (RE_PROPS.test(relativePath) && gaia.l10nManager) {
+    } else if (RE_PROPS.test(relativePath)) {
       let propFile = gaia.l10nManager.getPropertiesFile(webapp, file.path);
       if (propFile.exists()) {
         file = propFile;

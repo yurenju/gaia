@@ -73,12 +73,7 @@ function checkOrigin(origin) {
 function fillCommsAppManifest(webapp, webappTargetDir) {
   let manifestObject;
   let gaia = utils.getGaia(config);
-  if (gaia.l10nManager) {
-    manifestObject = gaia.l10nManager.localizeManifest(webapp);
-  } else {
-    let manifestContent = utils.getFileContent(webapp.manifestFile);
-    manifestObject = JSON.parse(manifestContent);
-  }
+  manifestObject = gaia.l10nManager.localizeManifest(webapp);
 
   let redirects = manifestObject.redirects;
 
@@ -159,16 +154,12 @@ function fillAppManifest(webapp) {
   webappTargetDir.append(webappTargetDirName);
   let gaia = utils.getGaia(config);
 
-  if (gaia.l10nManager) {
-    let manifest = gaia.l10nManager.localizeManifest(webapp);
-    manifestFile = webappTargetDir.clone();
-    utils.ensureFolderExists(webappTargetDir);
-    manifestFile.append('manifest.webapp');
-    let args = DEBUG ? [manifest, undefined, 2] : [manifest];
-    utils.writeContent(manifestFile, JSON.stringify.apply(JSON, args));
-  } else {
-    webapp.manifestFile.copyTo(webappTargetDir, 'manifest.webapp');
-  }
+  let manifest = gaia.l10nManager.localizeManifest(webapp);
+  manifestFile = webappTargetDir.clone();
+  utils.ensureFolderExists(webappTargetDir);
+  manifestFile.append('manifest.webapp');
+  let args = DEBUG ? [manifest, undefined, 2] : [manifest];
+  utils.writeContent(manifestFile, JSON.stringify.apply(JSON, args));
 
   if (webapp.url.indexOf('communications.gaiamobile.org') !== -1) {
     fillCommsAppManifest(webapp, webappTargetDir);
