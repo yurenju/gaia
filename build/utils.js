@@ -119,3 +119,6 @@ exports.getEnv = utils.getEnv;
 exports.isExternalApp = utils.isExternalApp;
 exports.getDocument = utils.getDocument;
 exports.getWebapp = utils.getWebapp;
+exports.addEntryContentWithTime = utils.addEntryContentWithTime;
+exports.copyDirTo = utils.copyDirTo;
+exports.getCompression = utils.getCompression;
