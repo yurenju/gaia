@@ -122,8 +122,8 @@ endif
 
 PROFILE_FOLDER?=profile
 
-STAGE_FOLDER?=build_stage
-export STAGE_FOLDER
+STAGE_DIR?=$(CURDIR)/build_stage
+export STAGE_DIR
 
 LOCAL_DOMAINS?=1
 
@@ -396,8 +396,9 @@ define BUILD_CONFIG
 	"ROCKETBAR" : "$(ROCKETBAR)", \
 	"TARGET_BUILD_VARIANT" : "$(TARGET_BUILD_VARIANT)", \
 	"SETTINGS_PATH" : "$(SETTINGS_PATH)", \
-	"VARIANT_PATH" : "$(VARIANT_PATH)", \
 	"KEYBOARD_LAYOUTS_PATH" : "$(KEYBOARD_LAYOUTS_PATH)" \
+	"STAGE_DIR" : "$(STAGE_DIR)", \
+	"VARIANT_PATH" : "$(VARIANT_PATH)" \
 }
 endef
 export BUILD_CONFIG
@@ -411,14 +412,38 @@ define run-build-test
 		$(strip $1)
 endef
 
-# Generate profile/
+# copy template function for each apps in build_stage, it can avoid copy again
+# if the app doesn't have any change.
+define copy_template
+$(1): $(2)/* $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
+	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
+		if [[ -e "$(2)/copy.mk" ]]; then \
+			echo "execute copy.mk for `basename $(2)` app" ;\
+			make -f "$(2)/copy.mk" -C "$(2)" ;\
+		else \
+			echo "copy `basename $(2)` to build_stage/" ;\
+			cp -r "$(2)" $(STAGE_DIR) ;\
+			rm -f "$(STAGE_DIR)/`basename $(2)`/Makefile" ;\
+		fi; \
+	fi;
+endef
 
-$(PROFILE_FOLDER): preferences app-makefiles keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions install-xulrunner-sdk .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
+BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo build_stage/`basename $(appdir)`))
+
+# Generate profile/
+$(PROFILE_FOLDER): preferences app-makefiles keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions $(XULRUNNER_BASE_DIRECTORY) .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
 ifeq ($(BUILD_APP_NAME),*)
 	@echo "Profile Ready: please run [b2g|firefox] -profile $(CURDIR)$(SEP)$(PROFILE_FOLDER)"
 endif
 
-svoperapps: install-xulrunner-sdk
+$(STAGE_DIR):
+	mkdir -p $@
+
+$(foreach appdir,$(GAIA_APPDIRS), \
+	$(eval $(call copy_template,build_stage/$(shell basename $(appdir)),$(appdir))) \
+)
+
+svoperapps: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, svoperapps)
 
 LANG=POSIX # Avoiding sort order differences between OSes
@@ -432,7 +457,7 @@ LANG=POSIX # Avoiding sort order differences between OSes
 # - build_stage/APPNAME/gaia_shared.json: This file lists shared resource
 #   dependencies that build/webapp-zip.js's detection logic might not determine
 #   because of lazy loading, etc.
-app-makefiles: svoperapps webapp-manifests keyboard-layouts install-xulrunner-sdk
+app-makefiles: $(BUILD_STAGE_APPS) svoperapps webapp-manifests keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
 	@for d in ${GAIA_APPDIRS}; \
 	do \
 		if [[ ("$$d" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
@@ -442,6 +467,7 @@ app-makefiles: svoperapps webapp-manifests keyboard-layouts install-xulrunner-sd
 			done; \
 		fi; \
 	done;
+
 
 .PHONY: webapp-manifests
 # Generate $(PROFILE_FOLDER)/webapps/
@@ -453,12 +479,12 @@ app-makefiles: svoperapps webapp-manifests keyboard-layouts install-xulrunner-sd
 # would likely want to change to see if the build directory includes a manifest
 # in that case.  Right now this is just making sure we don't race app-makefiles
 # in case someone does decide to get fancy.
-webapp-manifests: install-xulrunner-sdk
+webapp-manifests: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, webapp-manifests)
 
 .PHONY: webapp-zip
 # Generate $(PROFILE_FOLDER)/webapps/APP/application.zip
-webapp-zip: webapp-optimize app-makefiles keyboard-layouts install-xulrunner-sdk
+webapp-zip: webapp-optimize app-makefiles keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
 ifneq ($(DEBUG),1)
 	@mkdir -p $(PROFILE_FOLDER)/webapps
 	@$(call run-js-command, webapp-zip)
@@ -466,16 +492,16 @@ endif
 
 .PHONY: webapp-optimize
 # Web app optimization steps (like precompling l10n, concatenating js files, etc..).
-# You need xulrunner (install-xulrunner-sdk) to do this, and you need the app
+# You need xulrunner ($(XULRUNNER_BASE_DIRECTORY)) to do this, and you need the app
 # to have been built (app-makefiles).
-webapp-optimize: app-makefiles install-xulrunner-sdk
+webapp-optimize: app-makefiles $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, webapp-optimize)
 
 .PHONY: optimize-clean
 # Remove temporary l10n files created by the webapp-optimize step.  Because
 # webapp-zip wants these files to still be around during the zip stage, depend
 # on webapp-zip so it runs to completion before we start the cleanup.
-optimize-clean: webapp-zip install-xulrunner-sdk
+optimize-clean: webapp-zip $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, optimize-clean)
 
 .PHONY: keyboard-layouts
@@ -586,8 +612,7 @@ export XULRUNNER_DIRECTORY XULRUNNERSDK XPCSHELLSDK
 print-xulrunner-sdk:
 	@echo "$(XULRUNNER_DIRECTORY)"
 
-.PHONY: install-xulrunner-sdk
-install-xulrunner-sdk:
+$(XULRUNNER_BASE_DIRECTORY):
 	@echo "XULrunner directory: $(XULRUNNER_DIRECTORY)"
 ifndef USE_LOCAL_XULRUNNER_SDK
 ifneq ($(XULRUNNER_SDK_DOWNLOAD),$(shell test -d $(XULRUNNER_DIRECTORY) && cat $(XULRUNNER_URL_FILE) 2> /dev/null))
@@ -655,7 +680,7 @@ PARTNER_PREF_FILES = \
   partner-prefs.js\
 
 # Generate profile/prefs.js
-preferences: profile-dir install-xulrunner-sdk
+preferences: profile-dir $(XULRUNNER_BASE_DIRECTORY)
 ifeq ($(BUILD_APP_NAME),*)
 	@$(call run-js-command, preferences)
 	@$(foreach prefs_file,$(addprefix build/config/,$(EXTENDED_PREF_FILES)),\
@@ -987,7 +1012,7 @@ purge:
 	$(ADB) shell rm -r $(MSYS_FIX)/system/b2g/webapps
 	$(ADB) shell 'if test -d $(MSYS_FIX)/persist/svoperapps; then rm -r $(MSYS_FIX)/persist/svoperapps; fi'
 
-$(PROFILE_FOLDER)/settings.json: profile-dir keyboard-layouts install-xulrunner-sdk
+$(PROFILE_FOLDER)/settings.json: profile-dir keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
 ifeq ($(BUILD_APP_NAME),*)
 	@$(call run-js-command, settings)
 endif
@@ -1020,7 +1045,7 @@ endif
 
 # clean out build products
 clean:
-	rm -rf profile profile-debug profile-test $(PROFILE_FOLDER) $(STAGE_FOLDER) docs
+	rm -rf profile profile-debug profile-test $(PROFILE_FOLDER) $(STAGE_DIR) docs
 
 # clean out build products and tools
 really-clean: clean

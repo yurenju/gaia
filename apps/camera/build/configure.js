@@ -1,4 +1,5 @@
 var fs = require('fs');
+var path = require('path');
 var config = require('./customizeConfig.js');
 var maxImagePixelSize = 5 * 1024 * 1024;
 
@@ -8,8 +9,9 @@ var configurationFile;
 
 var generateConfigurationFile = function() {
   var content = config.customizeMaximumImageSize(configurationObject);
+  var configPath = path.join(process.env['BUILD_DIR'], 'js/config.js');
 
-  fs.writeFile('js/config.js', content, function(err) {
+  fs.writeFile(configPath, content, function(err) {
     if (err) {
         console.log(err);
     } else {

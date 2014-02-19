@@ -109,6 +109,7 @@ function fillAppManifest(webapp) {
   // Copy webapp's manifest to the profile
   let webappTargetDir = webappsTargetDir.clone();
   webappTargetDir.append(webappTargetDirName);
+  utils.ensureFolderExists(webappTargetDir);
   let gaia = utils.getGaia(config);
 
   if (gaia.l10nManager) {
@@ -347,12 +348,8 @@ function execute(options) {
     mapping[appname].manifestURL = webapps[appname].webappsJson.manifestURL;
   }
 
-  let stageFolder = utils.getEnv('STAGE_FOLDER');
-  let stageDir;
-  if (stageFolder) {
-    stageDir = utils.getFile(config.GAIA_DIR, stageFolder);
-    utils.ensureFolderExists(stageDir);
-  }
+  let stageDir = utils.getFile(config.STAGE_DIR);
+  utils.ensureFolderExists(stageDir);
   let mappingFile = stageDir.clone();
   mappingFile.append('webapps-mapping.json');
   utils.writeContent(mappingFile, JSON.stringify(mapping, null, 2));

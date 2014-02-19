@@ -22,7 +22,7 @@ CommAppBuilder.prototype.setOptions = function(options) {
   this.appDir = utils.getFile.apply(utils, appDirPath);
 
   this.webapp = utils.getWebapp(this.appDir.path, options.GAIA_DOMAIN,
-    options.GAIA_SCHEME, options.GAIA_PORT);
+    options.GAIA_SCHEME, options.GAIA_PORT, options.STAGE_DIR);
   this.gaia = utils.getGaia(options);
 
   var content = JSON.parse(utils.getFileContent(utils.getFile(this.appDir.path,
@@ -35,12 +35,8 @@ CommAppBuilder.prototype.setOptions = function(options) {
 
 CommAppBuilder.prototype.generateManifest = function() {
   var manifestObject;
-  if (this.gaia.l10nManager) {
-    manifestObject = this.gaia.l10nManager.localizeManifest(this.webapp);
-  } else {
-    var manifestContent = utils.getFileContent(this.webapp.manifestFile);
-    manifestObject = JSON.parse(manifestContent);
-  }
+  var manifestContent = utils.getFileContent(this.webapp.manifestFile);
+  manifestObject = JSON.parse(manifestContent);
 
   var redirects = manifestObject.redirects;
 
@@ -133,8 +129,8 @@ CommAppBuilder.prototype.generateCustomizeResources = function() {
       }
     });
   } else {
-    utils.log(variantFile.path + ' not found. Single variant resources will' +
-      ' not be added.\n');
+    utils.log('communications', variantFile.path + ' not found. Single' +
+      ' variant resources will not be added.\n');
   }
 };
 

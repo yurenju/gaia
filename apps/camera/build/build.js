@@ -14,16 +14,20 @@ CameraAppBuilder.prototype.APP_DIR = 'apps/camera';
 
 CameraAppBuilder.prototype.setOptions = function(options) {
   var appDirPath = [options.GAIA_DIR].concat(this.APP_DIR.split('/'));
+  this.stageDir = utils.getFile(options.STAGE_DIR, 'camera');
   this.appDir = utils.getFile.apply(utils, appDirPath);
+
+  var jsDir = utils.getFile(this.stageDir.path, 'js');
+  utils.ensureFolderExists(jsDir);
 };
 
 CameraAppBuilder.prototype.customizeMaximumImageSize = function(options) {
   var distDir = options.GAIA_DISTRIBUTION_DIR;
   var customize = JSON.parse(utils.getDistributionFileContent('camera',
                     DEFAULT_VALUE, distDir));
-  
+
   var content = config.customizeMaximumImageSize(customize);
-  var file = utils.getFile(this.appDir.path, 'js', 'config.js');
+  var file = utils.getFile(this.stageDir.path, 'js', 'config.js');
   utils.writeContent(file, content);
 };
 
