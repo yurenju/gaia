@@ -16,7 +16,11 @@ SOUNDS_SOURCES := $(call rwildcard,sounds/,*)
 STYLE_SOURCES := $(call rwildcard,style/,*)
 BUILD_SOURCES := $(call rwildcard,build/,*)
 
-BUILD_DIR=../../build_stage/clock
+ifndef STAGE_DIR
+	BUILD_DIR=../../build_stage/clock
+else
+	BUILD_DIR=$(STAGE_DIR)/clock
+endif
 
 .PHONY: all clean
 
@@ -30,7 +34,6 @@ $(BUILD_DIR)/js/startup.js: manifest.webapp index.html onring.html $(AUTOCONFIG_
 	cp -rp ../../shared $(BUILD_DIR)/shared
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/require_config.jslike
 	@rm -rf $(BUILD_DIR)/build
-	@rm $(BUILD_DIR)/gaia_build.json
 	@rm $(BUILD_DIR)/build.txt
 	@rm -rf $(BUILD_DIR)/Makefile
 	@rm $(BUILD_DIR)/README.md

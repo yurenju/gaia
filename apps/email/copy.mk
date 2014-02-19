@@ -22,7 +22,11 @@ SOUNDS_SOURCES := $(call rwildcard,sounds/,*)
 STYLE_SOURCES := $(call rwildcard,style/,*)
 BUILD_SOURCES := $(call rwildcard,build/,*)
 
-BUILD_DIR=../../build_stage/email
+ifndef STAGE_DIR
+	BUILD_DIR=../../build_stage/email
+else
+	BUILD_DIR=$(STAGE_DIR)/email
+endif
 
 .PHONY: all clean
 
@@ -41,7 +45,6 @@ $(BUILD_DIR)/js/mail_app.js: manifest.webapp index.html $(AUTOCONFIG_SOURCES) $(
 
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/email.build.js optimize=$(GAIA_EMAIL_MINIFY)
 	@rm -rf $(BUILD_DIR)/build
-	@rm $(BUILD_DIR)/gaia_build.json
 	@rm $(BUILD_DIR)/build.txt
 	@rm $(BUILD_DIR)/js/tmpl_builder.js
 	@rm -rf $(BUILD_DIR)/Makefile

@@ -6,10 +6,10 @@ var utils = require('utils');
 
 function execute(config) {
   var distDir = config.GAIA_DISTRIBUTION_DIR;
-  var gaiaDir = config.GAIA_DIR;
+  var stageDir = config.STAGE_DIR;
 
   // Calendar Config
-  var init = utils.getFile(gaiaDir, 'apps', 'calendar', 'js', 'presets.js');
+  var init = utils.getFile(stageDir, 'calendar', 'js', 'presets.js');
   var content = {
     'google': {
       providerType: 'Caldav',

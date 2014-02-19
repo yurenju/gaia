@@ -14,6 +14,7 @@ suite('Build Integration tests', function() {
   suiteSetup(function() {
     rmrf('profile');
     rmrf('profile-debug');
+    rmrf('build_stage');
     rmrf(localesDir);
   });
 
@@ -119,8 +120,6 @@ suite('Build Integration tests', function() {
                    'webapps', 'gallery.gaiamobile.org', 'application.zip'));
       var hsGalleryConfigJs =
         hsGalleryZip.readAsText(hsGalleryZip.getEntry('js/config.js'));
-      var hsCameraConfigJs = fs.readFileSync(
-        path.join('apps', 'camera', 'js', 'config.js'), { encoding: 'utf8' });
 
       var expectedScript =
         '//\n' +
@@ -153,8 +152,6 @@ suite('Build Integration tests', function() {
 
       assert.equal(hsGalleryConfigJs, expectedScript,
         'Gallery config js is not expected');
-      assert.equal(hsCameraConfigJs, expectedScript,
-        'Camera config js is not expected');
       done();
     });
   });
@@ -441,5 +438,6 @@ suite('Build Integration tests', function() {
   teardown(function() {
     rmrf('profile');
     rmrf('profile-debug');
+    rmrf('build_stage');
   });
 });

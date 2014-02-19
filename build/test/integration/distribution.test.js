@@ -11,6 +11,7 @@ suite('Distribution mechanism', function() {
   var distDir;
   suiteSetup(function() {
     rmrf('profile');
+    rmrf('build_stage');
   });
 
   function validatePreloadSettingDB() {
@@ -209,16 +210,6 @@ suite('Distribution mechanism', function() {
     validateCustomizeMaximumImageSize(distConfig, presetsContent);
   }
 
-  function validateCamera() {
-    var distPath = path.join(distDir, 'camera.json');
-    var distConfig = JSON.parse(fs.readFileSync(distPath));
-    var appConfigPath =
-      path.join(process.cwd(), 'apps', 'camera', 'js', 'config.js');
-    var appConfig = fs.readFileSync(appConfigPath, {encoding: 'utf8'});
-
-    validateCustomizeMaximumImageSize(distConfig, appConfig);
-  }
-
   function validateHomescreen() {
     var appZip = new AdmZip(path.join(process.cwd(), 'profile',
       'webapps', 'homescreen.gaiamobile.org', 'application.zip'));
@@ -251,7 +242,6 @@ suite('Distribution mechanism', function() {
       validateSystem();
       validateSms();
       validateGallery();
-      validateCamera();
       validateComm();
       validateHomescreen();
       done();
@@ -260,5 +250,6 @@ suite('Distribution mechanism', function() {
 
   teardown(function() {
     rmrf('profile');
+    rmrf('build_stage');
   });
 });

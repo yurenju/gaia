@@ -185,7 +185,7 @@ function readZipManifest(appDir) {
                   ' app (' + appDir.leafName + ')\n');
 }
 
-function getWebapp(app, domain, scheme, port) {
+function getWebapp(app, domain, scheme, port, stageDir) {
   let appDir = getFile(app);
   if (!appDir.exists()) {
     throw new Error(' -*- build/utils.js: file not found (' +
@@ -229,36 +229,18 @@ function getWebapp(app, domain, scheme, port) {
   }
 
   // Some webapps control their own build
-  let buildMetaData = webapp.sourceDirectoryFile.clone();
-  buildMetaData.append('gaia_build.json');
-  if (buildMetaData.exists()) {
-    webapp.build = getJSON(buildMetaData);
-
-    if (webapp.build.dir) {
-      let buildDirectoryFile = webapp.sourceDirectoryFile.clone();
-      webapp.build.dir.split('/').forEach(function(segment) {
-        if (segment == '..')
-          buildDirectoryFile = buildDirectoryFile.parent;
-        else
-          buildDirectoryFile.append(segment);
-      });
-
-      webapp.buildDirectoryFile = buildDirectoryFile;
-
-      let buildManifestFile = buildDirectoryFile.clone();
-      buildManifestFile.append('manifest.webapp');
-
-      webapp.buildManifestFile = buildManifestFile;
-    }
-  }
+  webapp.buildDirectoryFile = utils.getFile(stageDir,
+    webapp.sourceDirectoryName);
+  webapp.buildManifestFile = utils.getFile(webapp.buildDirectoryFile.path,
+    'manifest.webapp');
 
   return webapp;
 }
 
-function makeWebappsObject(appdirs, domain, scheme, port) {
+function makeWebappsObject(appdirs, domain, scheme, port, stageDir) {
   var apps = [];
   appdirs.forEach(function(app) {
-    var webapp = getWebapp(app, domain, scheme, port);
+    var webapp = getWebapp(app, domain, scheme, port, stageDir);
     if (webapp) {
       apps.push(webapp);
     }
@@ -292,7 +274,8 @@ function getGaia(options) {
     engine: options.GAIA_ENGINE,
     sharedFolder: getFile(options.GAIA_DIR, 'shared'),
     webapps: makeWebappsObject(options.GAIA_APPDIRS.split(' '),
-      options.GAIA_DOMAIN, options.GAIA_SCHEME, options.GAIA_PORT),
+      options.GAIA_DOMAIN, options.GAIA_SCHEME, options.GAIA_PORT,
+      options.STAGE_DIR),
     aggregatePrefix: 'gaia_build_',
     distributionDir: options.GAIA_DISTRIBUTION_DIR
   };
