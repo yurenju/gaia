@@ -22,8 +22,9 @@ WebappShared.prototype.setOptions = function(options) {
     throw new Error('LOCALES_FILE doesn\'t exists: ' + this.localesFile.path);
   }
 
-  this.buildDir = utils.getFile(this.webapp.buildDirectoryFile.parent.path,
-    this.webapp.sourceDirectoryName);
+  this.buildDir = this.webapp.buildDirectoryFile;
+  this.RE_DEFAULT_LOCALE = new RegExp('\\.html\\.' +
+    this.config.GAIA_DEFAULT_LOCALE);
 };
 
 WebappShared.prototype.pickByResolution = function(originalPath, targetPath) {
@@ -69,10 +70,6 @@ WebappShared.prototype.moveToBuildDir = function(file, targetPath) {
     return;
   }
 
-  if (utils.isSubjectToBranding(path)) {
-    file.append((this.config.OFFICIAL == 1) ? 'official' : 'unofficial');
-  }
-
   if (!file.exists()) {
     throw new Error('Can\'t add inexistent file to  : ' + path);
   }
@@ -81,33 +78,23 @@ WebappShared.prototype.moveToBuildDir = function(file, targetPath) {
   // it would put files in a folder with empty name...
   targetPath = targetPath.replace(/^\/+/, '');
 
-  // Case 1/ Regular file
   if (file.isFile()) {
-    try {
-      if (/\.html$/.test(file.leafName)) {
-        // this file might have been pre-translated for the default locale
-        var l10nFile = file.parent.clone();
-        l10nFile.append(file.leafName + '.' + this.config.GAIA_DEFAULT_LOCALE);
-        if (l10nFile.exists()) {
-          utils.copyFileTo(l10nFile, this.buildDir.path, targetPath, true);
-          return;
-        }
-      }
-
-      var re = new RegExp('\\.html\\.' + this.config.GAIA_DEFAULT_LOCALE);
-      if (!re.test(file.leafName)) {
-
-        utils.copyFileTo(file, this.buildDir.path, targetPath, true);
-      }
-    } catch (e) {
-      throw new Error('Unable to add following file in stage: ' +
-                      path + '\n' + e);
-    }
+    utils.copyFileTo(file, this.buildDir.path, targetPath, true);
   }
   // Case 2/ Directory
   else if (file.isDirectory()) {
     utils.copyDirTo(file, this.buildDir.path, targetPath, true);
   }
+};
+
+WebappShared.prototype.findDefaultLocaleFile = function(file) {
+  // this file might have been pre-translated for the default locale
+  var l10nFile = file.parent.clone();
+  l10nFile.append(file.leafName + '.' + this.config.GAIA_DEFAULT_LOCALE);
+  if (l10nFile.exists()) {
+    file = l10nFile;
+  }
+  return file;
 };
 
 /**
@@ -146,6 +133,16 @@ WebappShared.prototype.copyBuildingBlock =
       if (file.isDirectory()) {
         return;
       }
+      // SKip file if it's a default locale html file, we will add it in next
+      // |if| condition.
+      if (this.RE_DEFAULT_LOCALE.test(file.leafName)) {
+        return;
+      }
+      // use default locale html file if exists.
+      if (/\.html$/.test(file.leafName)) {
+        file = this.findDefaultLocaleFile(file);
+      }
+
       this.moveToBuildDir(file, dirPath + relativePath);
     }.bind(this));
   };
@@ -170,7 +167,7 @@ WebappShared.prototype.pushResource = function(path) {
   path.split('/').forEach(function(segment) {
     file.append(segment);
     if (utils.isSubjectToBranding(file.path)) {
-      file.append((this.config.OFFICIAL == 1) ? 'official' : 'unofficial');
+      file.append((this.config.OFFICIAL === 1) ? 'official' : 'unofficial');
     }
   }.bind(this));
 
@@ -241,27 +238,27 @@ WebappShared.prototype.pushLocale = function(name) {
 WebappShared.prototype.pushFileByType = function(kind, path) {
   switch (kind) {
     case 'js':
-      if (this.used.js.indexOf(path) == -1) {
+      if (this.used.js.indexOf(path) === -1) {
         this.used.js.push(path);
         this.pushJS(path);
       }
       break;
     case 'resources':
-      if (this.used[kind].indexOf(path) == -1) {
+      if (this.used[kind].indexOf(path) === -1) {
         this.used.resources.push(path);
         this.pushResource(path);
       }
       break;
     case 'style':
       var styleName = path.substr(0, path.lastIndexOf('.'));
-      if (this.used.styles.indexOf(styleName) == -1) {
+      if (this.used.styles.indexOf(styleName) === -1) {
         this.used.styles.push(styleName);
         this.copyBuildingBlock(styleName, 'style');
       }
       break;
     case 'style_unstable':
       var unstableStyleName = path.substr(0, path.lastIndexOf('.'));
-      if (this.used.unstable_styles.indexOf(unstableStyleName) == -1) {
+      if (this.used.unstable_styles.indexOf(unstableStyleName) === -1) {
         this.used.unstable_styles.push(unstableStyleName);
         this.copyBuildingBlock(unstableStyleName, 'style_unstable');
       }
@@ -269,7 +266,7 @@ WebappShared.prototype.pushFileByType = function(kind, path) {
     case 'locales':
       if (this.config.GAIA_INLINE_LOCALES !== '1') {
         var localeName = path.substr(0, path.lastIndexOf('.'));
-        if (this.used.locales.indexOf(localeName) == -1) {
+        if (this.used.locales.indexOf(localeName) === -1) {
           this.used.locales.push(localeName);
           this.pushLocale(localeName);
         }
@@ -283,7 +280,7 @@ WebappShared.prototype.filterSharedUsage = function(file) {
       /<(?:script|link).+=['"]\.?\.?\/?shared\/([^\/]+)\/([^''\s]+)("|')/g;
   var content = utils.getFileContent(file);
   var matches = null;
-  while((matches = SHARED_USAGE.exec(content))!== null) {
+  while((matches = SHARED_USAGE.exec(content)) !== null) {
     let kind = matches[1]; // js | locales | resources | style
     let path = matches[2];
     this.pushFileByType(kind, path);
@@ -293,16 +290,16 @@ WebappShared.prototype.filterSharedUsage = function(file) {
 WebappShared.prototype.filterHTML = function(file) {
   var EXTENSIONS_WHITELIST = ['html'];
   var extension = utils.getExtension(file.leafName);
-  return file.isFile() && EXTENSIONS_WHITELIST.indexOf(extension) != -1;
+  return file.isFile() && EXTENSIONS_WHITELIST.indexOf(extension) !== -1;
 };
 
 WebappShared.prototype.copyShared = function() {
   // If config.BUILD_APP_NAME isn't `*`, we only accept one webapp
-  if (this.config.BUILD_APP_NAME != '*' &&
-    this.webapp.sourceDirectoryName != this.config.BUILD_APP_NAME) {
+  if (this.config.BUILD_APP_NAME !== '*' &&
+    this.webapp.sourceDirectoryName !== this.config.BUILD_APP_NAME) {
     return;
   }
-  // Zip generation is not needed for external apps, aaplication data
+  // Zip generation is not needed for external apps, application data
   // is copied to profile webapps folder in webapp-manifests.js
   if (utils.isExternalApp(this.webapp)) {
     return;

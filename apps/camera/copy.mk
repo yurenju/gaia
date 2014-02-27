@@ -47,6 +47,7 @@ endif
 	rm -rf $(BUILD_DIR)/style
 	cp -rp ../../shared $(BUILD_DIR)/
 	$(JS_RUN_ENVIRONMENT) ../../build/r.js -o build/require_config.jslike
+	rm -rf $(BUILD_DIR)/shared
 
 clean:
 	rm -rf $(BUILD_DIR)

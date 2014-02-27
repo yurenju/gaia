@@ -122,7 +122,6 @@ function L10nManager(gaiaDir, sharedDir, localesFilePath, localeBasedir) {
     var ini = modifyLocaleIni(origin, localesClone);
     var iniContent = serializeIni(ini);
 
-
     if (zip.hasEntry(IniPathInZip)) {
       zip.removeEntry(IniPathInZip, false);
     }

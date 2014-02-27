@@ -39,3 +39,4 @@ $(BUILD_DIR)/js/startup.js: manifest.webapp index.html onring.html $(AUTOCONFIG_
 	@rm $(BUILD_DIR)/README.md
 	@rm -rf $(BUILD_DIR)/test
 	$(XULRUNNERSDK) $(XPCSHELLSDK) build/make_gaia_shared.js
+	@rm -rf $(BUILD_DIR)/shared

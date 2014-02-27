@@ -51,3 +51,4 @@ $(BUILD_DIR)/js/mail_app.js: manifest.webapp index.html $(AUTOCONFIG_SOURCES) $(
 	@rm $(BUILD_DIR)/README.md
 	@rm -rf $(BUILD_DIR)/test
 	$(XULRUNNERSDK) $(XPCSHELLSDK) build/make_gaia_shared.js
+	@rm -rf $(BUILD_DIR)/shared
