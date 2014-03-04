@@ -396,7 +396,7 @@ define BUILD_CONFIG
 	"ROCKETBAR" : "$(ROCKETBAR)", \
 	"TARGET_BUILD_VARIANT" : "$(TARGET_BUILD_VARIANT)", \
 	"SETTINGS_PATH" : "$(SETTINGS_PATH)", \
-	"KEYBOARD_LAYOUTS_PATH" : "$(KEYBOARD_LAYOUTS_PATH)" \
+	"KEYBOARD_LAYOUTS_PATH" : "$(KEYBOARD_LAYOUTS_PATH)", \
 	"STAGE_DIR" : "$(STAGE_DIR)", \
 	"VARIANT_PATH" : "$(VARIANT_PATH)" \
 }
@@ -412,10 +412,12 @@ define run-build-test
 		$(strip $1)
 endef
 
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
 # copy template function for each apps in build_stage, it can avoid copy again
 # if the app doesn't have any change.
-define copy_template
-$(1): $(2)/* $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
+define copy-template
+$(1): $(call rwildcard,$(2),*) $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
 	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
 		if [[ -e "$(2)/copy.mk" ]]; then \
 			echo "execute copy.mk for `basename $(2)` app" ;\
@@ -428,7 +430,21 @@ $(1): $(2)/* $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
 	fi;
 endef
 
+define test-agent-bootstrap-apps-template
+$(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boilerplate/_proxy.html $(TEST_COMMON)/test/boilerplate/_sandbox.html
+	@if [[ "$(SYS)" != *MINGW32_* ]]; then \
+		mkdir -p $(1)$(SEP)test$(SEP)unit ; \
+		mkdir -p $(1)$(SEP)test$(SEP)integration ; \
+	else \
+		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/unit ; \
+		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/integration ; \
+	fi; \
+	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_proxy.html $(1)$(SEP)test$(SEP)unit$(SEP)_proxy.html; \
+	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
+endef
+
 BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo build_stage/`basename $(appdir)`))
+TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
 
 # Generate profile/
 $(PROFILE_FOLDER): preferences app-makefiles keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions $(XULRUNNER_BASE_DIRECTORY) .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
@@ -440,7 +456,8 @@ $(STAGE_DIR):
 	mkdir -p $@
 
 $(foreach appdir,$(GAIA_APPDIRS), \
-	$(eval $(call copy_template,build_stage/$(shell basename $(appdir)),$(appdir))) \
+	$(eval $(call copy-template,build_stage/$(shell basename $(appdir)),$(appdir))) \
+	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
 )
 
 svoperapps: $(XULRUNNER_BASE_DIRECTORY)
@@ -467,7 +484,6 @@ app-makefiles: $(BUILD_STAGE_APPS) svoperapps webapp-manifests keyboard-layouts 
 			done; \
 		fi; \
 	done;
-
 
 .PHONY: webapp-manifests
 # Generate $(PROFILE_FOLDER)/webapps/
@@ -506,7 +522,7 @@ optimize-clean: webapp-zip $(XULRUNNER_BASE_DIRECTORY)
 
 .PHONY: keyboard-layouts
 # A separate step for shared/ folder to generate its content in build time
- keyboard-layouts: webapp-manifests install-xulrunner-sdk
+ keyboard-layouts: webapp-manifests $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, keyboard-layouts)
 
 # Get additional extensions
@@ -803,7 +819,7 @@ update-common: common-install
 
 # Create the json config file
 # for use with the test agent GUI
-test-agent-config: test-agent-bootstrap-apps
+test-agent-config: $(TEST_AGENT_TEMPLATE_FILES)
 ifeq ($(BUILD_APP_NAME),*)
 	@rm -f $(TEST_AGENT_CONFIG)
 	@touch $(TEST_AGENT_CONFIG)
@@ -823,24 +839,6 @@ ifeq ($(BUILD_APP_NAME),*)
 	@echo '  ]}' >> $(TEST_AGENT_CONFIG);
 	@echo "Finished: test ui config file: $(TEST_AGENT_CONFIG)"
 	@rm -f /tmp/test-agent-config
-endif
-
-.PHONY: test-agent-bootstrap-apps
-test-agent-bootstrap-apps:
-ifeq ($(BUILD_APP_NAME),*)
-	@for d in ${GAIA_APPDIRS} ;\
-	do \
-		if [[ "$(SYS)" != *MINGW32_* ]]; then \
-			mkdir -p $$d$(SEP)test$(SEP)unit ; \
-			mkdir -p $$d$(SEP)test$(SEP)integration ; \
-		else \
-			mkdir -p `echo "$$d" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/unit ; \
-			mkdir -p `echo "$$d" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/integration ; \
-		fi; \
-		cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_proxy.html $$d$(SEP)test$(SEP)unit$(SEP)_proxy.html; \
-		cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $$d$(SEP)test$(SEP)unit$(SEP)_sandbox.html; \
-	done
-	@echo "Finished: bootstrapping test proxies/sandboxes";
 endif
 
 # For test coverage report

@@ -23,7 +23,7 @@ else
 	BUILD_DIR=$(STAGE_DIR)/settings
 endif
 
-.PHONY: all clean
+.PHONY: all clean $(BUILD_DIR)/resources/gaia_commit.txt $(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json
 
 all: js_environment_available $(BUILD_DIR)/resources/gaia_commit.txt $(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json $(BUILD_DIR)/js/main.js
 
@@ -54,9 +54,5 @@ $(BUILD_DIR)/js/main.js: manifest.webapp index.html build/* $(SHARED_SOURCES) $(
 	cp -rp ../../shared $(BUILD_DIR)/shared
 	$(JS_RUN_ENVIRONMENT) ../../build/r.js -o build/require_config.jslike
 
-$(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json:
-ifdef XPCSHELLSDK
+$(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json: build/build.js
 	@$(call run-app-js-command, build)
-else ifndef JS_RUN_ENVIRONMENT
-	@$(NODEJS) build/configure.js
-endif
