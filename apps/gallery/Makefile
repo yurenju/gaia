@@ -16,14 +16,20 @@ METADATA_SCRIPTS = \
  js/imagesize.js \
  js/MetadataParser.js
 
-all: concatenated_scripts
+.PHONY: reset
+
+$(STAGE_APP_DIR): concatenated_scripts $(call rwildcard,$(APP_DIR),*)
 	@echo Building gallery app to build_stage...
 	@$(call run-app-js-command, build)
 
-concatenated_scripts: $(BUILD_DIR)/js/frame_scripts.js $(BUILD_DIR)/js/metadata_scripts.js
+concatenated_scripts: $(STAGE_APP_DIR)/js/frame_scripts.js $(STAGE_APP_DIR)/js/metadata_scripts.js
 
-$(BUILD_DIR)/js/frame_scripts.js: $(FULLSCREEN_SCRIPTS)
-	cat $(FULLSCREEN_SCRIPTS) > $(BUILD_DIR)/js/frame_scripts.js
+$(STAGE_APP_DIR)/js/frame_scripts.js: $(FULLSCREEN_SCRIPTS) reset
+	cat $(FULLSCREEN_SCRIPTS) > $(STAGE_APP_DIR)/js/frame_scripts.js
 
-$(BUILD_DIR)/js/metadata_scripts.js: $(METADATA_SCRIPTS)
-	cat $(METADATA_SCRIPTS) > $(BUILD_DIR)/js/metadata_scripts.js
+$(STAGE_APP_DIR)/js/metadata_scripts.js: $(METADATA_SCRIPTS) reset
+	cat $(METADATA_SCRIPTS) > $(STAGE_APP_DIR)/js/metadata_scripts.js
+
+reset:
+	rm -rf $(STAGE_APP_DIR)
+	mkdir -p $(STAGE_APP_DIR) $(STAGE_APP_DIR)/js

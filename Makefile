@@ -59,6 +59,8 @@
 #                                                                             #
 ###############################################################################
 
+MAKEFLAGS=-r
+
 -include local.mk
 
 # .b2g.mk recorded the make flags from Android.mk
@@ -361,44 +363,44 @@ TEST_DIRS ?= $(CURDIR)/tests
 
 define BUILD_CONFIG
 { \
-	"ADB" : "$(adb)", \
-	"GAIA_DIR" : "$(CURDIR)", \
-	"PROFILE_DIR" : "$(CURDIR)$(SEP)$(PROFILE_FOLDER)", \
-	"PROFILE_FOLDER" : "$(PROFILE_FOLDER)", \
-	"GAIA_SCHEME" : "$(SCHEME)", \
-	"GAIA_DOMAIN" : "$(GAIA_DOMAIN)", \
-	"DEBUG" : $(DEBUG), \
-	"LOCAL_DOMAINS" : $(LOCAL_DOMAINS), \
-	"DESKTOP" : $(DESKTOP), \
-	"DEVICE_DEBUG" : $(DEVICE_DEBUG), \
-	"NO_LOCK_SCREEN" : $(NO_LOCK_SCREEN), \
-	"HOMESCREEN" : "$(HOMESCREEN)", \
-	"GAIA_PORT" : "$(GAIA_PORT)", \
-	"GAIA_LOCALES_PATH" : "$(GAIA_LOCALES_PATH)", \
-	"GAIA_INSTALL_PARENT" : "$(GAIA_INSTALL_PARENT)", \
-	"LOCALES_FILE" : "$(subst \,\\,$(LOCALES_FILE))", \
-	"GAIA_KEYBOARD_LAYOUTS" : "$(GAIA_KEYBOARD_LAYOUTS)", \
-	"LOCALE_BASEDIR" : "$(subst \,\\,$(LOCALE_BASEDIR))", \
-	"BUILD_APP_NAME" : "$(BUILD_APP_NAME)", \
-	"PRODUCTION" : "$(PRODUCTION)", \
-	"GAIA_OPTIMIZE" : "$(GAIA_OPTIMIZE)", \
-	"GAIA_DEV_PIXELS_PER_PX" : "$(GAIA_DEV_PIXELS_PER_PX)", \
-	"DOGFOOD" : "$(DOGFOOD)", \
-	"OFFICIAL" : "$(MOZILLA_OFFICIAL)", \
-	"GAIA_DEFAULT_LOCALE" : "$(GAIA_DEFAULT_LOCALE)", \
-	"GAIA_INLINE_LOCALES" : "$(GAIA_INLINE_LOCALES)", \
-	"GAIA_CONCAT_LOCALES" : "$(GAIA_CONCAT_LOCALES)", \
-	"GAIA_ENGINE" : "xpcshell", \
-	"GAIA_DISTRIBUTION_DIR" : "$(GAIA_DISTRIBUTION_DIR)", \
-	"GAIA_APPDIRS" : "$(GAIA_APPDIRS)", \
-	"NOFTU" : "$(NOFTU)", \
-	"REMOTE_DEBUGGER" : "$(REMOTE_DEBUGGER)", \
-	"ROCKETBAR" : "$(ROCKETBAR)", \
-	"TARGET_BUILD_VARIANT" : "$(TARGET_BUILD_VARIANT)", \
-	"SETTINGS_PATH" : "$(SETTINGS_PATH)", \
-	"KEYBOARD_LAYOUTS_PATH" : "$(KEYBOARD_LAYOUTS_PATH)", \
-	"STAGE_DIR" : "$(STAGE_DIR)", \
-	"VARIANT_PATH" : "$(VARIANT_PATH)" \
+	\"ADB\" : \"$(adb)\", \
+	\"GAIA_DIR\" : \"$(CURDIR)\", \
+	\"PROFILE_DIR\" : \"$(CURDIR)$(SEP)$(PROFILE_FOLDER)\", \
+	\"PROFILE_FOLDER\" : \"$(PROFILE_FOLDER)\", \
+	\"GAIA_SCHEME\" : \"$(SCHEME)\", \
+	\"GAIA_DOMAIN\" : \"$(GAIA_DOMAIN)\", \
+	\"DEBUG\" : $(DEBUG), \
+	\"LOCAL_DOMAINS\" : $(LOCAL_DOMAINS), \
+	\"DESKTOP\" : $(DESKTOP), \
+	\"DEVICE_DEBUG\" : $(DEVICE_DEBUG), \
+	\"NO_LOCK_SCREEN\" : $(NO_LOCK_SCREEN), \
+	\"HOMESCREEN\" : \"$(HOMESCREEN)\", \
+	\"GAIA_PORT\" : \"$(GAIA_PORT)\", \
+	\"GAIA_LOCALES_PATH\" : \"$(GAIA_LOCALES_PATH)\", \
+	\"GAIA_INSTALL_PARENT\" : \"$(GAIA_INSTALL_PARENT)\", \
+	\"LOCALES_FILE\" : \"$(subst \,\\,$(LOCALES_FILE))\", \
+	\"GAIA_KEYBOARD_LAYOUTS\" : \"$(GAIA_KEYBOARD_LAYOUTS)\", \
+	\"LOCALE_BASEDIR\" : \"$(subst \,\\,$(LOCALE_BASEDIR))\", \
+	\"BUILD_APP_NAME\" : \"$(BUILD_APP_NAME)\", \
+	\"PRODUCTION\" : \"$(PRODUCTION)\", \
+	\"GAIA_OPTIMIZE\" : \"$(GAIA_OPTIMIZE)\", \
+	\"GAIA_DEV_PIXELS_PER_PX\" : \"$(GAIA_DEV_PIXELS_PER_PX)\", \
+	\"DOGFOOD\" : \"$(DOGFOOD)\", \
+	\"OFFICIAL\" : \"$(MOZILLA_OFFICIAL)\", \
+	\"GAIA_DEFAULT_LOCALE\" : \"$(GAIA_DEFAULT_LOCALE)\", \
+	\"GAIA_INLINE_LOCALES\" : \"$(GAIA_INLINE_LOCALES)\", \
+	\"GAIA_CONCAT_LOCALES\" : \"$(GAIA_CONCAT_LOCALES)\", \
+	\"GAIA_ENGINE\" : \"xpcshell\", \
+	\"GAIA_DISTRIBUTION_DIR\" : \"$(GAIA_DISTRIBUTION_DIR)\", \
+	\"GAIA_APPDIRS\" : \"$(GAIA_APPDIRS)\", \
+	\"NOFTU\" : \"$(NOFTU)\", \
+	\"REMOTE_DEBUGGER\" : \"$(REMOTE_DEBUGGER)\", \
+	\"ROCKETBAR\" : \"$(ROCKETBAR)\", \
+	\"TARGET_BUILD_VARIANT\" : \"$(TARGET_BUILD_VARIANT)\", \
+	\"SETTINGS_PATH\" : \"$(SETTINGS_PATH)\", \
+	\"KEYBOARD_LAYOUTS_PATH\" : \"$(KEYBOARD_LAYOUTS_PATH)\", \
+	\"STAGE_DIR\" : \"$(STAGE_DIR)\", \
+	\"VARIANT_PATH\" : \"$(VARIANT_PATH)\" \
 }
 endef
 export BUILD_CONFIG
@@ -411,170 +413,6 @@ define run-build-test
 		--timeout 0 \
 		$(strip $1)
 endef
-
-rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
-
-# copy template function for each apps in build_stage, it can avoid copy again
-# if the app doesn't have any change.
-define copy-template
-$(1): $(call rwildcard,$(2),*) $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
-	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
-		if [[ -e "$(2)/copy.mk" ]]; then \
-			echo "execute copy.mk for `basename $(2)` app" ;\
-			make -f "$(2)/copy.mk" -C "$(2)" ;\
-		else \
-			echo "copy `basename $(2)` to build_stage/" ;\
-			cp -r "$(2)" $(STAGE_DIR) ;\
-			rm -f "$(STAGE_DIR)/`basename $(2)`/Makefile" ;\
-		fi; \
-	fi;
-endef
-
-define test-agent-bootstrap-apps-template
-$(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boilerplate/_proxy.html $(TEST_COMMON)/test/boilerplate/_sandbox.html
-	@if [[ "$(SYS)" != *MINGW32_* ]]; then \
-		mkdir -p $(1)$(SEP)test$(SEP)unit ; \
-		mkdir -p $(1)$(SEP)test$(SEP)integration ; \
-	else \
-		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/unit ; \
-		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/integration ; \
-	fi; \
-	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_proxy.html $(1)$(SEP)test$(SEP)unit$(SEP)_proxy.html; \
-	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
-endef
-
-BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo build_stage/`basename $(appdir)`))
-TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
-
-# Generate profile/
-$(PROFILE_FOLDER): preferences app-makefiles keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions $(XULRUNNER_BASE_DIRECTORY) .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
-ifeq ($(BUILD_APP_NAME),*)
-	@echo "Profile Ready: please run [b2g|firefox] -profile $(CURDIR)$(SEP)$(PROFILE_FOLDER)"
-endif
-
-$(STAGE_DIR):
-	mkdir -p $@
-
-$(foreach appdir,$(GAIA_APPDIRS), \
-	$(eval $(call copy-template,build_stage/$(shell basename $(appdir)),$(appdir))) \
-	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
-)
-
-svoperapps: $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, svoperapps)
-
-LANG=POSIX # Avoiding sort order differences between OSes
-
-.PHONY: app-makefiles
-# Applications may want to perform their own build steps.  (For example, the
-# clock and e-mail apps use r.js to perform optimization steps.)  These steps
-# may produce the following output consumed by other tooling:
-# - build_stage/APPNAME/*: This is where the build output goes.
-#   build/webapp-zip.js knows about this directory.
-# - build_stage/APPNAME/gaia_shared.json: This file lists shared resource
-#   dependencies that build/webapp-zip.js's detection logic might not determine
-#   because of lazy loading, etc.
-app-makefiles: $(BUILD_STAGE_APPS) svoperapps webapp-manifests keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
-	@for d in ${GAIA_APPDIRS}; \
-	do \
-		if [[ ("$$d" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
-			for mfile in `find $$d -mindepth 1 -maxdepth 1 -name "Makefile"` ;\
-			do \
-				make -C `dirname $$mfile` || exit 1 ;\
-			done; \
-		fi; \
-	done;
-
-.PHONY: webapp-manifests
-# Generate $(PROFILE_FOLDER)/webapps/
-# We duplicate manifest.webapp to manifest.webapp and manifest.json
-# to accommodate Gecko builds without bug 757613. Should be removed someday.
-#
-# We depend on app-makefiles so that per-app Makefiles could modify the manifest
-# as part of their build step.  None currently do this, and webapp-manifests.js
-# would likely want to change to see if the build directory includes a manifest
-# in that case.  Right now this is just making sure we don't race app-makefiles
-# in case someone does decide to get fancy.
-webapp-manifests: $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, webapp-manifests)
-
-.PHONY: webapp-zip
-# Generate $(PROFILE_FOLDER)/webapps/APP/application.zip
-webapp-zip: webapp-optimize app-makefiles keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
-ifneq ($(DEBUG),1)
-	@mkdir -p $(PROFILE_FOLDER)/webapps
-	@$(call run-js-command, webapp-zip)
-endif
-
-.PHONY: webapp-optimize
-# Web app optimization steps (like precompling l10n, concatenating js files, etc..).
-# You need xulrunner ($(XULRUNNER_BASE_DIRECTORY)) to do this, and you need the app
-# to have been built (app-makefiles).
-webapp-optimize: app-makefiles $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, webapp-optimize)
-
-.PHONY: optimize-clean
-# Remove temporary l10n files created by the webapp-optimize step.  Because
-# webapp-zip wants these files to still be around during the zip stage, depend
-# on webapp-zip so it runs to completion before we start the cleanup.
-optimize-clean: webapp-zip $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, optimize-clean)
-
-.PHONY: keyboard-layouts
-# A separate step for shared/ folder to generate its content in build time
- keyboard-layouts: webapp-manifests $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, keyboard-layouts)
-
-# Get additional extensions
-$(PROFILE_FOLDER)/installed-extensions.json: build/config/additional-extensions.json $(wildcard .build/config/custom-extensions.json)
-ifeq ($(SIMULATOR),1)
-	# Prevent installing external firefox helper addon for the simulator
-else ifeq ($(DESKTOP),1)
-	@$(call run-js-command, additional-extensions)
-endif
-
-profile-dir:
-	@test -d $(PROFILE_FOLDER) || mkdir -p $(PROFILE_FOLDER)
-
-# Copy preload contacts to profile
-contacts: profile-dir
-ifeq ($(BUILD_APP_NAME),*)
-ifdef CONTACTS_PATH
-	@echo "Copying preload contacts to profile"
-	@cp $(CONTACTS_PATH) $(PROFILE_FOLDER)
-else
-	@rm -f $(PROFILE_FOLDER)/contacts.json
-endif
-endif
-
-# Create webapps
-offline: app-makefiles optimize-clean
-
-# Create an empty reference workload
-.PHONY: reference-workload-empty
-reference-workload-empty:
-	test_media/reference-workload/makeReferenceWorkload.sh empty
-
-# Create a light reference workload
-.PHONY: reference-workload-light
-reference-workload-light:
-	test_media/reference-workload/makeReferenceWorkload.sh light
-
-# Create a medium reference workload
-.PHONY: reference-workload-medium
-reference-workload-medium:
-	test_media/reference-workload/makeReferenceWorkload.sh medium
-
-# Create a heavy reference workload
-.PHONY: reference-workload-heavy
-reference-workload-heavy:
-	test_media/reference-workload/makeReferenceWorkload.sh heavy
-
-# Create an extra heavy reference workload
-.PHONY: reference-workload-x-heavy
-reference-workload-x-heavy:
-	test_media/reference-workload/makeReferenceWorkload.sh x-heavy
-
 
 # The install-xulrunner target arranges to get xulrunner downloaded and sets up
 # some commands for invoking it. But it is platform dependent
@@ -624,6 +462,164 @@ endif
 # So let's export these variables to external processes.
 export XULRUNNER_DIRECTORY XULRUNNERSDK XPCSHELLSDK
 
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
+# copy template function for each apps in build_stage, it can avoid copy again
+# if the app doesn't have any change.
+define app-makefile-template
+$(1): $(call rwildcard,$(2),*) $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
+	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then   \
+		if [[ -e "$(2)/Makefile" ]]; then                                             \
+			echo "execute Makefile for `basename $(2)` app" ;                           \
+			STAGE_APP_DIR="$(STAGE_DIR)/`basename $(2)`" APP_DIR="$(2)" make -C "$(2)" ;\
+		else                                                                          \
+			echo "copy `basename $(2)` to build_stage/" ;                               \
+			rm -rf "$(STAGE_DIR)/`basename $(2)`";                                      \
+			cp -r "$(2)" $(STAGE_DIR) ;                                                 \
+			rm -f "$(STAGE_DIR)/`basename $(2)`/Makefile" ;                             \
+			if [[ -e "$(2)/build/build.js" ]]; then                                     \
+				echo "execute `basename $(2)`/build/build.js";                            \
+				$(XULRUNNERSDK) $(XPCSHELLSDK)                                            \
+				  -e "const GAIA_BUILD_DIR='$(GAIA_BUILD_DIR)'"                           \
+				  -e "const APP_BUILD_DIR='file://$(2)/build/'"                           \
+				  -f ./build/xpcshell-commonjs.js                                         \
+				  -e "try { require('app/build').execute($(BUILD_CONFIG)); quit(0);}      \
+				        catch(e) {                                                        \
+				          dump('Exception: ' + e + '\n' + e.stack + '\n');                \
+				        throw(e);                                                         \
+				      }";                                                                 \
+			fi;                                                                         \
+		fi;                                                                           \
+	fi;
+endef
+
+define test-agent-bootstrap-apps-template
+$(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boilerplate/_proxy.html $(TEST_COMMON)/test/boilerplate/_sandbox.html
+	@if [[ "$(SYS)" != *MINGW32_* ]]; then \
+		mkdir -p $(1)$(SEP)test$(SEP)unit ; \
+		mkdir -p $(1)$(SEP)test$(SEP)integration ; \
+	else \
+		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/unit ; \
+		mkdir -p `echo "$(1)" | sed 's|^\(\w\):|/\1|g' | sed 's|\\\\|/|g'`/test/integration ; \
+	fi; \
+	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_proxy.html $(1)$(SEP)test$(SEP)unit$(SEP)_proxy.html; \
+	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
+endef
+
+BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo build_stage/`basename $(appdir)`))
+TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
+
+# Generate profile/
+$(PROFILE_FOLDER): preferences $(BUILD_STAGE_APPS) keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions $(XULRUNNER_BASE_DIRECTORY) .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
+ifeq ($(BUILD_APP_NAME),*)
+	@echo "Profile Ready: please run [b2g|firefox] -profile $(CURDIR)$(SEP)$(PROFILE_FOLDER)"
+endif
+
+$(STAGE_DIR):
+	mkdir -p $@
+
+$(foreach appdir,$(GAIA_APPDIRS), \
+	$(eval $(call app-makefile-template,build_stage/$(shell basename $(appdir)),$(appdir))) \
+	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
+)
+
+$(STAGE_DIR)/keyboard: webapp-manifests
+$(STAGE_DIR)/homescreen: webapp-manifests
+
+svoperapps: $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command, svoperapps)
+
+LANG=POSIX # Avoiding sort order differences between OSes
+
+# Generate $(PROFILE_FOLDER)/webapps/
+# We duplicate manifest.webapp to manifest.webapp and manifest.json
+# to accommodate Gecko builds without bug 757613. Should be removed someday.
+#
+# We depend on $(BUILD_STAGE_APPS) so that per-app Makefiles could modify the manifest
+# as part of their build step.  None currently do this, and webapp-manifests.js
+# would likely want to change to see if the build directory includes a manifest
+# in that case.  Right now this is just making sure we don't race $(BUILD_STAGE_APPS)
+# in case someone does decide to get fancy.
+webapp-manifests: $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command, webapp-manifests)
+
+.PHONY: webapp-zip
+# Generate $(PROFILE_FOLDER)/webapps/APP/application.zip
+webapp-zip: webapp-optimize $(BUILD_STAGE_APPS) keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
+ifneq ($(DEBUG),1)
+	@mkdir -p $(PROFILE_FOLDER)/webapps
+	@$(call run-js-command, webapp-zip)
+endif
+
+.PHONY: webapp-optimize
+# Web app optimization steps (like precompling l10n, concatenating js files, etc..).
+# You need xulrunner ($(XULRUNNER_BASE_DIRECTORY)) to do this, and you need the app
+# to have been built ($(BUILD_STAGE_APPS)).
+webapp-optimize: $(BUILD_STAGE_APPS) $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command, webapp-optimize)
+
+.PHONY: optimize-clean
+# Remove temporary l10n files created by the webapp-optimize step.  Because
+# webapp-zip wants these files to still be around during the zip stage, depend
+# on webapp-zip so it runs to completion before we start the cleanup.
+optimize-clean: webapp-zip $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command, optimize-clean)
+
+.PHONY: keyboard-layouts
+# A separate step for shared/ folder to generate its content in build time
+ keyboard-layouts: webapp-manifests $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command, keyboard-layouts)
+
+# Get additional extensions
+$(PROFILE_FOLDER)/installed-extensions.json: build/config/additional-extensions.json $(wildcard .build/config/custom-extensions.json)
+ifeq ($(SIMULATOR),1)
+	# Prevent installing external firefox helper addon for the simulator
+else ifeq ($(DESKTOP),1)
+	@$(call run-js-command, additional-extensions)
+endif
+
+profile-dir:
+	@test -d $(PROFILE_FOLDER) || mkdir -p $(PROFILE_FOLDER)
+
+# Copy preload contacts to profile
+contacts: profile-dir
+ifeq ($(BUILD_APP_NAME),*)
+ifdef CONTACTS_PATH
+	@echo "Copying preload contacts to profile"
+	@cp $(CONTACTS_PATH) $(PROFILE_FOLDER)
+else
+	@rm -f $(PROFILE_FOLDER)/contacts.json
+endif
+endif
+
+# Create webapps
+offline: $(BUILD_STAGE_APPS) optimize-clean
+
+# Create an empty reference workload
+.PHONY: reference-workload-empty
+reference-workload-empty:
+	test_media/reference-workload/makeReferenceWorkload.sh empty
+
+# Create a light reference workload
+.PHONY: reference-workload-light
+reference-workload-light:
+	test_media/reference-workload/makeReferenceWorkload.sh light
+
+# Create a medium reference workload
+.PHONY: reference-workload-medium
+reference-workload-medium:
+	test_media/reference-workload/makeReferenceWorkload.sh medium
+
+# Create a heavy reference workload
+.PHONY: reference-workload-heavy
+reference-workload-heavy:
+	test_media/reference-workload/makeReferenceWorkload.sh heavy
+
+# Create an extra heavy reference workload
+.PHONY: reference-workload-x-heavy
+reference-workload-x-heavy:
+	test_media/reference-workload/makeReferenceWorkload.sh x-heavy
+
 .PHONY: print-xulrunner-sdk
 print-xulrunner-sdk:
 	@echo "$(XULRUNNER_DIRECTORY)"
@@ -660,7 +656,7 @@ define run-js-command
 	$(XULRUNNERSDK) $(XPCSHELLSDK) \
 		-e "const GAIA_BUILD_DIR='$(GAIA_BUILD_DIR)'" \
 		-f build/xpcshell-commonjs.js \
-		-e "try { require('$(strip $1)').execute($$BUILD_CONFIG); quit(0);} \
+		-e "try { require('$(strip $1)').execute($(BUILD_CONFIG)); quit(0);} \
 			catch(e) { \
 				dump('Exception: ' + e + '\n' + e.stack + '\n'); \
 				throw(e); \
@@ -670,7 +666,7 @@ endef
 define run-node-command
 	echo "run-node-command $1";
 	node --harmony -e \
-	"require('./build/$(strip $1).js').execute($$BUILD_CONFIG)"
+	"require('./build/$(strip $1).js').execute($(BUILD_CONFIG))"
 endef
 
 # Optional files that may be provided to extend the set of default
@@ -793,7 +789,7 @@ test-perf:
 	MOZPERFOUT="$(MOZPERFOUT)" APPS="$(APPS)" MARIONETTE_RUNNER_HOST=$(MARIONETTE_RUNNER_HOST) GAIA_DIR="`pwd`" ./bin/gaia-perf-marionette
 
 .PHONY: tests
-tests: app-makefiles offline
+tests: $(BUILD_STAGE_APPS) offline
 	echo "Checking if the mozilla build has tests enabled..."
 	test -d $(MOZ_TESTS) || (echo "Please ensure you don't have |ac_add_options --disable-tests| in your mozconfig." && exit 1)
 	echo "Checking the injected Gaia..."
@@ -1059,7 +1055,7 @@ adb-remount:
 # Generally we got manifest from webapp-manifest.js unless manifest is generated
 # from Makefile of app. so we will copy manifest.webapp if it's avaiable in
 # build_stage/
-copy-build-stage-manifest: app-makefiles
+copy-build-stage-manifest: $(BUILD_STAGE_APPS)
 	@$(call run-js-command, copy-build-stage-manifest)
 
 build-test-unit: $(NPM_INSTALLED_PROGRAMS)

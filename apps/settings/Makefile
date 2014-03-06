@@ -8,8 +8,6 @@ else ifndef JS_RUN_ENVIRONMENT
     JS_RUN_ENVIRONMENT := $(NODEJS)
 endif
 
-rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
-
 SHARED_SOURCES := $(call rwildcard,../../shared/,*)
 JS_SOURCES := $(call rwildcard,js/,*)
 LOCALES_SOURCES := $(call rwildcard,locales/,*)
@@ -17,18 +15,12 @@ RESOURCES_SOURCES := $(call rwildcard,resources/,*)
 STYLE_SOURCES := $(call rwildcard,style/,*)
 BUILD_SOURCES := $(call rwildcard,build/,*)
 
-ifndef STAGE_DIR
-	BUILD_DIR=../../build_stage/settings
-else
-	BUILD_DIR=$(STAGE_DIR)/settings
-endif
+.PHONY: all clean $(STAGE_APP_DIR)/resources/gaia_commit.txt $(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json
 
-.PHONY: all clean $(BUILD_DIR)/resources/gaia_commit.txt $(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json
-
-all: js_environment_available $(BUILD_DIR)/resources/gaia_commit.txt $(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json $(BUILD_DIR)/js/main.js
+all: js_environment_available $(STAGE_APP_DIR)/resources/gaia_commit.txt $(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json $(STAGE_APP_DIR)/js/main.js
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(STAGE_APP_DIR)
 
 js_environment_available:
 ifndef JS_RUN_ENVIRONMENT
@@ -38,21 +30,22 @@ endif
 GAIA_ROOT_PATH?=../..
 
 # Generate a text file containing the current changeset of Gaia
-$(BUILD_DIR)/resources/gaia_commit.txt:
+$(STAGE_APP_DIR)/resources/gaia_commit.txt:
+	mkdir -p $(STAGE_APP_DIR)/resources/
 	@(if [ -e ${GAIA_ROOT_PATH}/gaia_commit_override.txt ]; then \
-		cp ${GAIA_ROOT_PATH}/gaia_commit_override.txt $(BUILD_DIR)/resources/gaia_commit.txt; \
+		cp ${GAIA_ROOT_PATH}/gaia_commit_override.txt $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
 	elif [ -d ${GAIA_ROOT_PATH}/.git ]; then \
-		git --git-dir=${GAIA_ROOT_PATH}/.git log -1 --format="%H%n%ct" HEAD > $(BUILD_DIR)/resources/gaia_commit.txt; \
+		git --git-dir=${GAIA_ROOT_PATH}/.git log -1 --format="%H%n%ct" HEAD > $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
 	else \
-		echo 'Unknown Git commit; build date shown here.' > $(BUILD_DIR)/resources/gaia_commit.txt; \
-		date +%s >> $(BUILD_DIR)/resources/gaia_commit.txt; \
+		echo 'Unknown Git commit; build date shown here.' > $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
+		date +%s >> $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
 	fi)
 
-$(BUILD_DIR)/js/main.js: manifest.webapp index.html build/* $(SHARED_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(RESOURCES_SOURCES) $(STYLE_SOURCES) $(BUILD_SOURCES)
-	@rm -rf $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
-	cp -rp ../../shared $(BUILD_DIR)/shared
+$(STAGE_APP_DIR)/js/main.js: manifest.webapp index.html build/* $(SHARED_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(RESOURCES_SOURCES) $(STYLE_SOURCES) $(BUILD_SOURCES)
+	@rm -rf $(STAGE_APP_DIR)
+	@mkdir -p $(STAGE_APP_DIR)
+	cp -rp ../../shared $(STAGE_APP_DIR)/shared
 	$(JS_RUN_ENVIRONMENT) ../../build/r.js -o build/require_config.jslike
 
-$(BUILD_DIR)/resources/support.json $(BUILD_DIR)/resources/sensors.json: build/build.js
+$(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json: build/build.js
 	@$(call run-app-js-command, build)

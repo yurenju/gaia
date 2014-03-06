@@ -226,7 +226,7 @@ function fillExternalAppManifest(webapp) {
 
   // In case of packaged app, just copy `application.zip` and `update.webapp`
   if (isPackaged) {
-    let updateManifest = webapp.buildDirectoryFile.clone();
+    let updateManifest = webapp.sourceDirectoryFile.clone();
     updateManifest.append('update.webapp');
     if (!updateManifest.exists()) {
       errors.push('External packaged webapp `' + webapp.domain + '  is ' +
@@ -237,7 +237,7 @@ function fillExternalAppManifest(webapp) {
       return;
     }
 
-    let appPackage = webapp.buildDirectoryFile.clone();
+    let appPackage = webapp.sourceDirectoryFile.clone();
     appPackage.append('application.zip');
     appPackage.copyTo(webappTargetDir, 'application.zip');
     updateManifest.copyTo(webappTargetDir, 'update.webapp');
@@ -249,7 +249,7 @@ function fillExternalAppManifest(webapp) {
                                                     true;
 
     // This is an hosted app. Check if there is an offline cache.
-    let srcCacheFolder = webapp.buildDirectoryFile.clone();
+    let srcCacheFolder = webapp.sourceDirectoryFile.clone();
     srcCacheFolder.append('cache');
     if (srcCacheFolder.exists()) {
       let cacheManifest = srcCacheFolder.clone();

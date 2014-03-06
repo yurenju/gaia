@@ -1,3 +1,5 @@
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
 APP_BUILD_DIR?=file:///$(shell pwd)/build/
 ifneq (,$(findstring MINGW32_,$(SYS)))
 	APP_BUILD_DIR := file:///$(shell sh -c 'pwd -W')/build/
@@ -8,7 +10,7 @@ define run-app-js-command
     -e "const GAIA_BUILD_DIR='$(GAIA_BUILD_DIR)'" \
     -e "const APP_BUILD_DIR='$(APP_BUILD_DIR)'" \
     -f ../../build/xpcshell-commonjs.js \
-    -e "try { require('app/$(strip $1)').execute($$BUILD_CONFIG); quit(0);} \
+    -e "try { require('app/$(strip $1)').execute($(BUILD_CONFIG)); quit(0);} \
           catch(e) { \
             dump('Exception: ' + e + '\n' + e.stack + '\n'); \
           throw(e); \
