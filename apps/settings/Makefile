@@ -30,7 +30,7 @@ endif
 GAIA_ROOT_PATH?=../..
 
 # Generate a text file containing the current changeset of Gaia
-$(STAGE_APP_DIR)/resources/gaia_commit.txt:
+$(STAGE_APP_DIR)/resources/gaia_commit.txt: $(STAGE_APP_DIR)
 	mkdir -p $(STAGE_APP_DIR)/resources/
 	@(if [ -e ${GAIA_ROOT_PATH}/gaia_commit_override.txt ]; then \
 		cp ${GAIA_ROOT_PATH}/gaia_commit_override.txt $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
@@ -41,11 +41,12 @@ $(STAGE_APP_DIR)/resources/gaia_commit.txt:
 		date +%s >> $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
 	fi)
 
-$(STAGE_APP_DIR)/js/main.js: manifest.webapp index.html build/* $(SHARED_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(RESOURCES_SOURCES) $(STYLE_SOURCES) $(BUILD_SOURCES)
-	@rm -rf $(STAGE_APP_DIR)
+$(STAGE_APP_DIR): clean
 	@mkdir -p $(STAGE_APP_DIR)
+
+$(STAGE_APP_DIR)/js/main.js: $(STAGE_APP_DIR) manifest.webapp index.html $(SHARED_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(RESOURCES_SOURCES) $(STYLE_SOURCES) $(BUILD_SOURCES)
 	cp -rp ../../shared $(STAGE_APP_DIR)/shared
 	$(JS_RUN_ENVIRONMENT) ../../build/r.js -o build/require_config.jslike
 
-$(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json: build/build.js
+$(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json: build/build.js $(STAGE_APP_DIR)
 	@$(call run-app-js-command, build)
