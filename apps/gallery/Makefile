@@ -19,6 +19,7 @@ METADATA_SCRIPTS = \
 .PHONY: reset
 
 $(STAGE_APP_DIR): concatenated_scripts $(call rwildcard,$(APP_DIR),*)
+	@cp -r $(APP_DIR) $(STAGE_APP_DIR)
 	@echo Building gallery app to build_stage...
 	@$(call run-app-js-command, build)
 

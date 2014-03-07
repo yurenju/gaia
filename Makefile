@@ -506,7 +506,7 @@ $(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boi
 	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
 endef
 
-BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo build_stage/`basename $(appdir)`))
+BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(STAGE_DIR)/`basename $(appdir)`))
 TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
 
 # Generate profile/
@@ -519,7 +519,7 @@ $(STAGE_DIR):
 	mkdir -p $@
 
 $(foreach appdir,$(GAIA_APPDIRS), \
-	$(eval $(call app-makefile-template,build_stage/$(shell basename $(appdir)),$(appdir))) \
+	$(eval $(call app-makefile-template,$(STAGE_DIR)/$(shell basename $(appdir)),$(appdir))) \
 	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
 )
 
