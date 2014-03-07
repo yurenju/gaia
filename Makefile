@@ -524,9 +524,7 @@ $(foreach appdir,$(GAIA_APPDIRS), \
 )
 
 $(STAGE_DIR)/keyboard: webapp-manifests keyboard-layouts
-$(STAGE_DIR)/homescreen: webapp-manifests
-
-$(BUILD_STAGE_APPS): svoperapps
+$(STAGE_DIR)/homescreen: webapp-manifests svoperapps
 
 svoperapps: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, svoperapps)

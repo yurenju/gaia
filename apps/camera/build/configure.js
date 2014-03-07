@@ -1,15 +1,17 @@
+'use strict';
+
+/* global require, process */
+
 var fs = require('fs');
 var path = require('path');
 var config = require('./customizeConfig.js');
-var maxImagePixelSize = 5 * 1024 * 1024;
 
 var gaiaDistributionDirectory = process.env.GAIA_DISTRIBUTION_DIR;
 var configurationObject = {};
-var configurationFile;
 
 var generateConfigurationFile = function() {
   var content = config.customizeMaximumImageSize(configurationObject);
-  var configPath = path.join(process.env['BUILD_DIR'], 'js/config.js');
+  var configPath = path.join(process.env.STAGE_APP_DIR, 'js/config.js');
 
   fs.writeFile(configPath, content, function(err) {
     if (err) {

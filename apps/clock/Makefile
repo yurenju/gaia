@@ -16,26 +16,20 @@ SOUNDS_SOURCES := $(call rwildcard,sounds/,*)
 STYLE_SOURCES := $(call rwildcard,style/,*)
 BUILD_SOURCES := $(call rwildcard,build/,*)
 
-ifndef STAGE_DIR
-	BUILD_DIR=../../build_stage/clock
-else
-	BUILD_DIR=$(STAGE_DIR)/clock
-endif
-
 .PHONY: all clean
 
-all: $(BUILD_DIR)/js/startup.js
+all: $(STAGE_APP_DIR)/js/startup.js
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(STAGE_APP_DIR)
 
-$(BUILD_DIR)/js/startup.js: manifest.webapp index.html onring.html $(AUTOCONFIG_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(SOUNDS_SOURCES) $(STYLE_SOURCES) $(SHARED_SOURCES) $(BUILD_SOURCES)
-	@rm -rf $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
-	cp -rp ../../shared $(BUILD_DIR)/shared
+$(STAGE_APP_DIR)/js/startup.js: manifest.webapp index.html onring.html $(AUTOCONFIG_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(SOUNDS_SOURCES) $(STYLE_SOURCES) $(SHARED_SOURCES) $(BUILD_SOURCES)
+	@rm -rf $(STAGE_APP_DIR)
+	@mkdir -p $(STAGE_APP_DIR)
+	cp -rp ../../shared $(STAGE_APP_DIR)/shared
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/require_config.jslike
-	@rm -rf $(BUILD_DIR)/build
-	@rm $(BUILD_DIR)/build.txt
-	@rm -rf $(BUILD_DIR)/Makefile
-	@rm $(BUILD_DIR)/README.md
-	@rm -rf $(BUILD_DIR)/test
+	@rm -rf $(STAGE_APP_DIR)/build
+	@rm $(STAGE_APP_DIR)/build.txt
+	@rm -rf $(STAGE_APP_DIR)/Makefile
+	@rm $(STAGE_APP_DIR)/README.md
+	@rm -rf $(STAGE_APP_DIR)/test
 	$(XULRUNNERSDK) $(XPCSHELLSDK) build/make_gaia_shared.js

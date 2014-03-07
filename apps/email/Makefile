@@ -22,32 +22,26 @@ SOUNDS_SOURCES := $(call rwildcard,sounds/,*)
 STYLE_SOURCES := $(call rwildcard,style/,*)
 BUILD_SOURCES := $(call rwildcard,build/,*)
 
-ifndef STAGE_DIR
-	BUILD_DIR=../../build_stage/email
-else
-	BUILD_DIR=$(STAGE_DIR)/email
-endif
-
 .PHONY: all clean
 
-all: $(BUILD_DIR)/js/mail_app.js
+all: $(STAGE_APP_DIR)/js/mail_app.js
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(STAGE_APP_DIR)
 
-$(BUILD_DIR)/js/mail_app.js: manifest.webapp index.html $(AUTOCONFIG_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(SOUNDS_SOURCES) $(STYLE_SOURCES) $(SHARED_SOURCES) $(BUILD_SOURCES)
-	@rm -rf $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)/shared
-	@mkdir -p $(BUILD_DIR)/shared/js
+$(STAGE_APP_DIR)/js/mail_app.js: manifest.webapp index.html $(AUTOCONFIG_SOURCES) $(JS_SOURCES) $(LOCALES_SOURCES) $(SOUNDS_SOURCES) $(STYLE_SOURCES) $(SHARED_SOURCES) $(BUILD_SOURCES)
+	@rm -rf $(STAGE_APP_DIR)
+	@mkdir -p $(STAGE_APP_DIR)
+	@mkdir -p $(STAGE_APP_DIR)/shared
+	@mkdir -p $(STAGE_APP_DIR)/shared/js
 
-	cp -p ../../shared/js/*.js $(BUILD_DIR)/shared/js
-	cp -rp ../../shared/style $(BUILD_DIR)/shared
+	cp -p ../../shared/js/*.js $(STAGE_APP_DIR)/shared/js
+	cp -rp ../../shared/style $(STAGE_APP_DIR)/shared
 
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/email.build.js optimize=$(GAIA_EMAIL_MINIFY)
-	@rm -rf $(BUILD_DIR)/build
-	@rm $(BUILD_DIR)/build.txt
-	@rm $(BUILD_DIR)/js/tmpl_builder.js
-	@rm -rf $(BUILD_DIR)/Makefile
-	@rm $(BUILD_DIR)/README.md
-	@rm -rf $(BUILD_DIR)/test
+	@rm -rf $(STAGE_APP_DIR)/build
+	@rm $(STAGE_APP_DIR)/build.txt
+	@rm $(STAGE_APP_DIR)/js/tmpl_builder.js
+	@rm -rf $(STAGE_APP_DIR)/Makefile
+	@rm $(STAGE_APP_DIR)/README.md
+	@rm -rf $(STAGE_APP_DIR)/test
 	$(XULRUNNERSDK) $(XPCSHELLSDK) build/make_gaia_shared.js

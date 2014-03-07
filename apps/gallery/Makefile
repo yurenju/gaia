@@ -1,7 +1,5 @@
 -include $(PWD)/build/common.mk
 
-BUILD_DIR=$(STAGE_DIR)/gallery
-
 FULLSCREEN_SCRIPTS = \
  ../../shared/js/gesture_detector.js \
  ../../shared/js/format.js \
