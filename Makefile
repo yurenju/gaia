@@ -523,8 +523,10 @@ $(foreach appdir,$(GAIA_APPDIRS), \
 	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
 )
 
-$(STAGE_DIR)/keyboard: webapp-manifests
+$(STAGE_DIR)/keyboard: webapp-manifests keyboard-layouts
 $(STAGE_DIR)/homescreen: webapp-manifests
+
+$(BUILD_STAGE_APPS): svoperapps
 
 svoperapps: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, svoperapps)
