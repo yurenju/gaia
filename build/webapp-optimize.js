@@ -628,7 +628,7 @@ function optimize_compile(webapp, file, callback) {
 }
 
 
-function execute(options) {
+function execute(options, appName) {
   /**
    * Pre-translate all HTML files for the default locale
    */
@@ -661,6 +661,10 @@ function execute(options) {
       }
     }
     l10nLocales.push(config.GAIA_DEFAULT_LOCALE);
+  }
+
+  if (appName) {
+    config.BUILD_APP_NAME = appName;
   }
 
   utils.getGaia(config).webapps.forEach(function(webapp) {

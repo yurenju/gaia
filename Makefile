@@ -462,6 +462,22 @@ endif
 # So let's export these variables to external processes.
 export XULRUNNER_DIRECTORY XULRUNNERSDK XPCSHELLSDK
 
+define run-js-command
+# When an xpcshell module throws exception which is already captured by
+# JavaScript module, some exceptions will make xpcshell returns error code.
+# We put quit(0); to override the return code when all exceptions are handled
+# in JavaScript module.
+	@echo "run-js-command $1 $2";
+	@$(XULRUNNERSDK) $(XPCSHELLSDK) \
+		-e "const GAIA_BUILD_DIR='$(GAIA_BUILD_DIR)'" \
+		-f build/xpcshell-commonjs.js \
+		-e "try { require('$(strip $1)').execute($(BUILD_CONFIG), '$(2)'); quit(0);} \
+			catch(e) { \
+				dump('Exception: ' + e + '\n' + e.stack + '\n'); \
+				throw(e); \
+			}"
+endef
+
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 # copy template function for each apps in build_stage, it can avoid copy again
@@ -506,7 +522,14 @@ $(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boi
 	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
 endef
 
+define webapp-optimize-template
+$(1)/locales-obj: $(call rwildcard,$(2),*) $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
+	@rm -rf $(1)/locales-obj
+	@$(call run-js-command, webapp-optimize,$(shell basename $(1)))
+endef
+
 BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(STAGE_DIR)/`basename $(appdir)`))
+LOCALES_OBJ_DIRS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(STAGE_DIR)/`basename $(appdir)`/locales-obj))
 TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
 
 # Generate profile/
@@ -521,6 +544,7 @@ $(STAGE_DIR):
 $(foreach appdir,$(GAIA_APPDIRS), \
 	$(eval $(call app-makefile-template,$(STAGE_DIR)/$(shell basename $(appdir)),$(appdir))) \
 	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
+	$(eval $(call webapp-optimize-template,$(STAGE_DIR)/$(shell basename $(appdir)),$(appdir))) \
 )
 
 $(STAGE_DIR)/keyboard: webapp-manifests keyboard-layouts
@@ -545,18 +569,18 @@ webapp-manifests: $(XULRUNNER_BASE_DIRECTORY)
 
 .PHONY: webapp-zip
 # Generate $(PROFILE_FOLDER)/webapps/APP/application.zip
-webapp-zip: webapp-optimize $(BUILD_STAGE_APPS) keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
+webapp-zip: $(LOCALES_OBJ_DIRS) $(BUILD_STAGE_APPS) keyboard-layouts $(XULRUNNER_BASE_DIRECTORY)
 ifneq ($(DEBUG),1)
 	@mkdir -p $(PROFILE_FOLDER)/webapps
 	@$(call run-js-command, webapp-zip)
 endif
 
-.PHONY: webapp-optimize
-# Web app optimization steps (like precompling l10n, concatenating js files, etc..).
-# You need xulrunner ($(XULRUNNER_BASE_DIRECTORY)) to do this, and you need the app
-# to have been built ($(BUILD_STAGE_APPS)).
-webapp-optimize: $(BUILD_STAGE_APPS) $(XULRUNNER_BASE_DIRECTORY)
-	@$(call run-js-command, webapp-optimize)
+# .PHONY: webapp-optimize
+# # Web app optimization steps (like precompling l10n, concatenating js files, etc..).
+# # You need xulrunner ($(XULRUNNER_BASE_DIRECTORY)) to do this, and you need the app
+# # to have been built ($(BUILD_STAGE_APPS)).
+# webapp-optimize: $(BUILD_STAGE_APPS) $(XULRUNNER_BASE_DIRECTORY)
+# 	@$(call run-js-command, webapp-optimize)
 
 .PHONY: optimize-clean
 # Remove temporary l10n files created by the webapp-optimize step.  Because
@@ -646,22 +670,6 @@ endif # MINGW32
 	@echo $(XULRUNNER_SDK_DOWNLOAD) > $(XULRUNNER_URL_FILE)
 endif # XULRUNNER_SDK_DOWNLOAD
 endif # USE_LOCAL_XULRUNNER_SDK
-
-define run-js-command
-# When an xpcshell module throws exception which is already captured by
-# JavaScript module, some exceptions will make xpcshell returns error code.
-# We put quit(0); to override the return code when all exceptions are handled
-# in JavaScript module.
-	echo "run-js-command $1";
-	$(XULRUNNERSDK) $(XPCSHELLSDK) \
-		-e "const GAIA_BUILD_DIR='$(GAIA_BUILD_DIR)'" \
-		-f build/xpcshell-commonjs.js \
-		-e "try { require('$(strip $1)').execute($(BUILD_CONFIG)); quit(0);} \
-			catch(e) { \
-				dump('Exception: ' + e + '\n' + e.stack + '\n'); \
-				throw(e); \
-			}"
-endef
 
 define run-node-command
 	echo "run-node-command $1";
