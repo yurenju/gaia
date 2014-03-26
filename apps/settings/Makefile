@@ -15,26 +15,24 @@ all: $(STAGE_APP_DIR)/resources/gaia_commit.txt $(STAGE_APP_DIR)/resources/suppo
 clean:
 	rm -rf $(STAGE_APP_DIR)
 
-GAIA_ROOT_PATH?=../..
-
 # Generate a text file containing the current changeset of Gaia
 $(STAGE_APP_DIR)/resources/gaia_commit.txt: | $(STAGE_APP_DIR)
-	mkdir -p $(STAGE_APP_DIR)/resources/
-	@(if [ -e ${GAIA_ROOT_PATH}/gaia_commit_override.txt ]; then \
-		cp ${GAIA_ROOT_PATH}/gaia_commit_override.txt $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
-	elif [ -d ${GAIA_ROOT_PATH}/.git ]; then \
-		git --git-dir=${GAIA_ROOT_PATH}/.git log -1 --format="%H%n%ct" HEAD > $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
-	else \
-		echo 'Unknown Git commit; build date shown here.' > $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
-		date +%s >> $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
-	fi)
+	mkdir -p $(STAGE_APP_DIR)/resources
+ifneq ($(wildcard ${GAIA_DIR}/gaia_commit_override.txt),)
+	cp ${GAIA_DIR}/gaia_commit_override.txt $(STAGE_APP_DIR)/resources/gaia_commit.txt
+else ifneq ($(wildcard ${GAIA_DIR}/.git),)
+	git --git-dir=${GAIA_DIR}/.git log -1 --format="%H%n%ct" HEAD > $(STAGE_APP_DIR)/resources/gaia_commit.txt
+else
+	echo 'Unknown Git commit; build date shown here.' > $(STAGE_APP_DIR)/resources/gaia_commit.txt; \
+		date +%s >> $(STAGE_APP_DIR)/resources/gaia_commit.txt;
+endif
 
 $(STAGE_APP_DIR): clean
-	@mkdir -p $(STAGE_APP_DIR)
+	mkdir -p $(STAGE_APP_DIR)
 
 $(STAGE_APP_DIR)/js/main.js: | $(STAGE_APP_DIR)
 	cp -rp ../../shared $(STAGE_APP_DIR)/shared
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/require_config.jslike
 
 $(STAGE_APP_DIR)/resources/support.json $(STAGE_APP_DIR)/resources/sensors.json: build/build.js $(STAGE_APP_DIR)
-	@$(call run-js-command,app/build,$(CURDIR))
+	@$(call run-js-command,app/build)

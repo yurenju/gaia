@@ -1,3 +1,11 @@
+APP_DIR := $(CURDIR)
+
+ifneq (,$(findstring MINGW32_,$(SYS)))
+APP_DIR:=$(shell pwd -W | sed -e 's|/|\\\\|g')
+endif
+
+export APP_DIR
+
 define run-build-test
   ./node_modules/.bin/mocha \
     --harmony \
@@ -14,10 +22,10 @@ endef
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 define run-js-command
-  echo "run-js-command $1 `test -n \"$(2)\" && basename $(2)`"; \
+  echo "run-js-command $1 `test -n \"$APP_DIR\" && basename $APP_DIR`"; \
   $(XULRUNNERSDK) $(XPCSHELLSDK) \
     -f "$(GAIA_DIR)/build/xpcshell-commonjs.js" \
-    -e "run('$(strip $1)', '$(2)');"
+    -e "run('$(strip $1)');"
 endef
 
 define run-node-command
@@ -27,5 +35,5 @@ define run-node-command
 endef
 
 define clean-build-files
-  rm -rf "$(1)/Makefile" "$(1)/build" "$(1)/build.txt" "$(1)/test" "$(1)/README.md"
+  rm -rf "$(1)$(SEP)Makefile" "$(1)$(SEP)build" "$(1)$(SEP)build.txt" "$(1)$(SEP)test" "$(1)$(SEP)README.md"
 endef

@@ -22,9 +22,9 @@ clean:
 
 $(STAGE_APP_DIR)/js/mail_app.js:
 	@rm -rf $(STAGE_APP_DIR)
-	@mkdir -p $(STAGE_APP_DIR)/shared/js
+	mkdir -p $(STAGE_APP_DIR)/shared
 
-	cp -p ../../shared/js/*.js $(STAGE_APP_DIR)/shared/js
+	cp -rp ../../shared/js $(STAGE_APP_DIR)/shared
 	cp -rp ../../shared/style $(STAGE_APP_DIR)/shared
 
 	$(XULRUNNERSDK) $(XPCSHELLSDK) ../../build/r.js -o build/email.build.js optimize=$(GAIA_EMAIL_MINIFY)

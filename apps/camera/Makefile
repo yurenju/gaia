@@ -15,7 +15,7 @@ $(STAGE_APP_DIR):
 	mkdir -p $(STAGE_APP_DIR)
 
 $(STAGE_APP_DIR)/js/main.js: | $(STAGE_APP_DIR)
-	@$(call run-js-command,app/build,$(CURDIR))
+	@$(call run-js-command,app/build)
 	rm -rf $(STAGE_APP_DIR)/shared
 	rm -rf $(STAGE_APP_DIR)/style
 	cp -rp ../../shared $(STAGE_APP_DIR)/

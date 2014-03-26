@@ -90,6 +90,11 @@ KeyboardAppBuilder.prototype.copyStaticFiles = function() {
       [this.appDir.path].concat(filenameArr));
     var distSubDir = utils.getFile.apply(utils,
       [this.distDir.path].concat(filenameArr.slice(0, filenameArr.length - 1)));
+    var targetFile = distSubDir.clone();
+    targetFile.append(file.leafName);
+    if (targetFile.exists()) {
+      targetFile.remove(true);
+    }
     file.copyTo(distSubDir, file.leafName);
   }.bind(this));
 };

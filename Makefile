@@ -470,23 +470,24 @@ define app-makefile-template
 $(1): $(call rwildcard,$(2),*) $(XULRUNNER_BASE_DIRECTORY) | $(STAGE_DIR)
 	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || (${BUILD_APP_NAME} == "*") ]]; then \
 		if [[ -e "$(2)/Makefile" ]]; then \
-			echo "execute Makefile for `basename $(2)` app" ; \
-			STAGE_APP_DIR="$(STAGE_DIR)/`basename $(2)`" make -C "$(2)" ; \
+			echo "execute Makefile for $(shell basename $(2)) app" ; \
+			STAGE_APP_DIR="../../build_stage/$(shell basename $(2))" make -C "$(2)" ; \
 		else \
-			echo "copy `basename $(2)` to build_stage/" ; \
-			rm -rf "$(STAGE_DIR)/`basename $(2)`"; \
+			echo "copy $(shell basename $(2)) to build_stage/" ; \
+			rm -rf "$(STAGE_DIR)/$(shell basename $(2))"; \
 			cp -r "$(2)" $(STAGE_DIR) ; \
 			if [[ -e "$(2)/build/build.js" ]]; then \
-				echo "execute `basename $(2)`/build/build.js"; \
-				$(call run-js-command,app/build,$(2)); \
+				echo "execute $(shell basename $(2))/build/build.js"; \
+				export APP_DIR=$(2); \
+				$(call run-js-command,app/build); \
 			fi; \
 		fi; \
-		$(call clean-build-files,$(STAGE_DIR)/`basename $(2)`); \
+		$(call clean-build-files,$(STAGE_DIR)/$(shell basename $(2))); \
 	fi;
 endef
 
 define test-agent-bootstrap-apps-template
-$(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boilerplate/_proxy.html $(TEST_COMMON)/test/boilerplate/_sandbox.html
+$(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_proxy.html: $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_proxy.html $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html
 	@if [[ "$(SYS)" != *MINGW32_* ]]; then \
 		mkdir -p $(1)$(SEP)test$(SEP)unit ; \
 		mkdir -p $(1)$(SEP)test$(SEP)integration ; \
@@ -498,8 +499,8 @@ $(1)/test/unit/_sandbox.html $(1)/test/unit/_proxy.html: $(TEST_COMMON)/test/boi
 	cp -f $(TEST_COMMON)$(SEP)test$(SEP)boilerplate$(SEP)_sandbox.html $(1)$(SEP)test$(SEP)unit$(SEP)_sandbox.html;
 endef
 
-BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(STAGE_DIR)/`basename $(appdir)`))
-TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(shell echo $(appdir)/test/unit/_sandbox.html $(appdir)/test/unit/_proxy.html))
+BUILD_STAGE_APPS := $(foreach appdir,$(GAIA_APPDIRS),$(STAGE_DIR)$(SEP)$(shell basename $(appdir)))
+TEST_AGENT_TEMPLATE_FILES := $(foreach appdir,$(GAIA_APPDIRS),$(appdir)$(SEP)test$(SEP)unit$(SEP)_sandbox.html $(appdir)$(SEP)test$(SEP)unit$(SEP)_proxy.html)
 
 # Generate profile/
 $(PROFILE_FOLDER): preferences $(BUILD_STAGE_APPS) keyboard-layouts copy-build-stage-manifest test-agent-config offline contacts extensions $(XULRUNNER_BASE_DIRECTORY) .git/hooks/pre-commit $(PROFILE_FOLDER)/settings.json create-default-data $(PROFILE_FOLDER)/installed-extensions.json
@@ -511,16 +512,16 @@ $(STAGE_DIR):
 	mkdir -p $@
 
 $(foreach appdir,$(GAIA_APPDIRS), \
-	$(eval $(call app-makefile-template,$(STAGE_DIR)/$(shell basename $(appdir)),$(appdir))) \
+	$(eval $(call app-makefile-template,$(STAGE_DIR)$(SEP)$(shell basename $(appdir)),$(appdir))) \
 	$(eval $(call test-agent-bootstrap-apps-template,$(appdir))) \
 )
 
 # Keyboard app needs keyboard_layouts.json from |keyboard-layouts|
-$(STAGE_DIR)/keyboard: keyboard-layouts
+$(STAGE_DIR)$(SEP)keyboard: keyboard-layouts
 
 # Homescreen app needs webapps-mapping.json from |webapp-manifests| and
 # singlevariantconf.json from |svoperapps|
-$(STAGE_DIR)/homescreen: webapp-manifests svoperapps
+$(STAGE_DIR)$(SEP)homescreen: webapp-manifests svoperapps
 
 svoperapps: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command, svoperapps)

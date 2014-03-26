@@ -10,14 +10,15 @@ let { Loader } = Cu.import(loaderURI, {});
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import("resource://gre/modules/FileUtils.jsm");
 
-var CommonjsRunner = function(module, appDir) {
+var CommonjsRunner = function(module) {
   const GAIA_DIR = env.get('GAIA_DIR');
+  const APP_DIR = env.get('APP_DIR');
 
   let gaiaDirFile = new FileUtils.File(GAIA_DIR);
   let appBuildDirFile, appDirFile;
 
-  if (appDir) {
-    appDirFile = new FileUtils.File(appDir);
+  if (APP_DIR) {
+    appDirFile = new FileUtils.File(APP_DIR);
     appBuildDirFile = appDirFile.clone();
     appBuildDirFile.append('build');
   }
@@ -74,7 +75,7 @@ CommonjsRunner.prototype.run = function() {
   }
 };
 
-function run(module, appDir) {
-  var runner = new CommonjsRunner(module, appDir);
+function run(module) {
+  var runner = new CommonjsRunner(module);
   runner.run();
 }
