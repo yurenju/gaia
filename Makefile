@@ -59,10 +59,6 @@
 #                                                                             #
 ###############################################################################
 
-
-# Eliminate use of the built-in implicit rules to get faster.
-MAKEFLAGS=-r
-
 -include local.mk
 
 # Headless bot does not need the full output of wget
@@ -253,6 +249,14 @@ XULRUNNER_SDK_URL=http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly/2014/
 XULRUNNER_BASE_DIRECTORY?=xulrunner-sdk-30
 XULRUNNER_DIRECTORY?=$(XULRUNNER_BASE_DIRECTORY)/xulrunner-sdk
 XULRUNNER_URL_FILE=$(XULRUNNER_BASE_DIRECTORY)/.url
+
+NPROCS := 1
+
+ifeq ($(SYS),Linux)
+  NPROCS := $(shell grep -c ^processor /proc/cpuinfo)
+else ifeq ($(OS),Darwin)
+  NPROCS := $(shell system_profiler | awk '/Number of CPUs/ {print $$4}{next;}')
+endif # $(OS)
 
 ifeq ($(SYS),Darwin)
 # For mac we have the xulrunner-sdk so check for this directory
@@ -477,26 +481,6 @@ endef
 
 export BUILD_CONFIG
 
-define app-makefile-template
-.PHONY: $(1)
-$(1): $(XULRUNNER_BASE_DIRECTORY) keyboard-layouts contacts-import-services $(STAGE_DIR)/settings_stage.json webapp-manifests svoperapps clear-stage-app webapp-shared | $(STAGE_DIR)
-	@if [[ ("$(2)" =~ "${BUILD_APP_NAME}") || ("${BUILD_APP_NAME}" == "*") ]]; then \
-  	if [ -r "$(2)/Makefile" ]; then \
-  		echo "execute Makefile for $(1) app" ; \
-  		STAGE_APP_DIR="$(STAGE_DIR)/$(1)" make -C "$(2)" ; \
-  	else \
-  		echo "copy $(1) to build_stage/" ; \
-  		cp -LR "$(2)" $(STAGE_DIR) && \
-  		if [ -r "$(2)/build/build.js" ]; then \
-  			echo "execute $(1)/build/build.js"; \
-  			export APP_DIR=$(2); \
-  			$(call run-js-command,app/build); \
-  		fi; \
-  	fi && \
-  	$(call clean-build-files,$(STAGE_DIR)/$(1)); \
-  fi;
-endef
-
 include build/common.mk
 
 # Generate profile/
@@ -512,13 +496,13 @@ test-agent-bootstrap: $(XULRUNNER_BASE_DIRECTORY)
 $(STAGE_DIR):
 	mkdir -p $@
 
-APP_RULES := $(foreach appdir,$(GAIA_APPDIRS),$(notdir $(appdir)))
-$(foreach appdir,$(GAIA_APPDIRS), \
-	$(eval $(call app-makefile-template,$(notdir $(appdir)),$(appdir))) \
-)
+.PHONY: $(STAGE_DIR)/Makefile
+$(STAGE_DIR)/Makefile: $(XULRUNNER_BASE_DIRECTORY) keyboard-layouts contacts-import-services $(STAGE_DIR)/settings_stage.json webapp-manifests svoperapps clear-stage-app webapp-shared | $(STAGE_DIR)
+	@$(call run-js-command,apps-makefile)
 
 .PHONY: app-makefiles
-app-makefiles: $(APP_RULES)
+app-makefiles: $(STAGE_DIR)/Makefile
+	make -C $(STAGE_DIR) -j$(NPROCS)
 
 .PHONY: clear-stage-app
 clear-stage-app:

@@ -1,4 +1,4 @@
-include $(PWD)/build/common.mk
+include $(GAIA_DIR)/build/common.mk
 
 .PHONY: all
 all:
