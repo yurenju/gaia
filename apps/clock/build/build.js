@@ -11,11 +11,5 @@ exports.execute = function(options) {
     'require_config.jslike');
 
   utils.ensureFolderExists(stageAppDir);
-  var requirejs = r.get(options.GAIA_DIR);
-  requirejs.optimize([configFile.path], function() {
-    dump('build ok\n');
-  }, function(err) {
-    dump('build failed\n');
-    dump(err + '\n');
-  });
+  r.optimize(options.GAIA_DIR, configFile.path);
 };

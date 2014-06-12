@@ -7,7 +7,7 @@ const { Cc, Ci, Cu } = require('chrome');
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/reflect.jsm');
 
-exports.get = function(gaiaDir) {
+exports.optimize = function(gaiaDir, configPath) {
   var rjs = utils.getFile(gaiaDir);
   rjs.append('build');
   rjs.append('r.js');
@@ -19,10 +19,8 @@ exports.get = function(gaiaDir) {
       utils: Cu
     },
     print: console.log.bind(console),
-    arguments: [],
-    requirejsAsLib: true,
+    arguments: ['-o', configPath],
     Reflect: Reflect
   };
   Services.scriptloader.loadSubScript(ruri, global);
-  return global.requirejs;
-};
+}
