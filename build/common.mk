@@ -30,5 +30,5 @@ endef
 define run-node-command
   echo "run-node-command $1";
   node --harmony -e \
-  "require('./build/$(strip $1).js').execute($(BUILD_CONFIG))"
+  "require('./build/$(strip $1).js').execute(JSON.parse(process.env.BUILD_CONFIG))"
 endef

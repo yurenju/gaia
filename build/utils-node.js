@@ -1,5 +1,7 @@
 'use strict';
 
+/* global require */
+
 var utils = require('./utils.js');
 var path = require('path');
 var sh = require('child_process').exec;
@@ -7,6 +9,7 @@ var fs = require('fs');
 var AdmZip = require('adm-zip');
 var Q = require('q');
 var os = require('os');
+var rmrf = require('rimraf').sync;
 
 function joinPath() {
   var src = path.join.apply(this, arguments);
@@ -33,6 +36,13 @@ function getFile() {
     },
     isFile: function() {
       return !!fileStat && fileStat.isFile();
+    },
+    remove: function(recursive) {
+      if (recursive)  {
+        rmrf(src);
+      } else {
+        fs.unlinkSync(src);
+      }
     },
     path: src
   };
