@@ -80,7 +80,8 @@ SettingsAppBuilder.prototype.executeRjs = function(options) {
 };
 
 SettingsAppBuilder.prototype.writeGitCommit = function(options) {
-  var gitDir = utils.getFile(options.GAIA_DIR, '.git');
+  var gaiaDir = utils.getFile(options.GAIA_DIR);
+  var gitGitDir = utils.getFile(options.GAIA_DIR, '.git');
   var overrideCommitFile = utils.getFile(options.GAIA_DIR,
     'gaia_commit_override.txt');
   var commitFile = utils.getFile(options.STAGE_APP_DIR, 'resources');
@@ -92,12 +93,19 @@ SettingsAppBuilder.prototype.writeGitCommit = function(options) {
       commitFile.remove(false);
     }
     overrideCommitFile.copyTo(commitFile.parent, commitFile.leafName);
-  } else if(gitDir.exists()) {
+  } else if(gitGitDir.exists()) {
+    var gaiaGitDirPath = gitGitDir.path;
+    var gitCommitPath = commitFile.path;
     var sh = new utils.Commander('sh');
     sh.initPath(utils.getEnvPath());
 
-    sh.run(['-c', 'git --git-dir=' + gitDir.path + ' log -1 ' +
-      '--format="%H%n%ct" HEAD > ' + commitFile.path]);
+    if (utils.getOsType().indexOf('WIN') !== -1)  {
+      gaiaGitDirPath = gitGitDir.getRelativeDescriptor(gaiaDir);
+      gitCommitPath = commitFile.getRelativeDescriptor(gaiaDir);
+    }
+
+    sh.run(['-c', 'git --git-dir=' + gaiaGitDirPath + ' log -1 ' +
+      '--format="%H%n%ct" HEAD > ' + gitCommitPath]);
   } else {
     utils.writeContent(commitFile,
       'Unknown Git commit; build date shown here.\n' +

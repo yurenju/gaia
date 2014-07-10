@@ -467,9 +467,6 @@ function copyDirTo(path, toParent, name, override) {
 function copyToStage(options) {
   var stageAppDir = getFile(options.STAGE_APP_DIR);
   var appDir = getFile(options.APP_DIR);
-  if (stageAppDir.exists()) {
-    stageAppDir.remove(true);
-  }
   copyDirTo(appDir, options.STAGE_DIR, appDir.leafName);
 }
 
