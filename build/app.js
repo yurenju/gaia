@@ -6,6 +6,9 @@ var utils = require('utils');
 
 exports.execute = function(options) {
   var appRegExp;
+  if (utils.getEnv('TRAVIS')) {
+    dump("travis_fold:start:app\n");
+  }
   try {
     appRegExp = utils.getAppNameRegex(options.BUILD_APP_NAME);
   } catch (e) {
@@ -33,4 +36,7 @@ exports.execute = function(options) {
       }
     }
   });
+  if (utils.getEnv('TRAVIS')) {
+    dump("travis_fold:end:app\n");
+  }
 };
