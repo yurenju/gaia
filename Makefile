@@ -506,6 +506,10 @@ LANG=POSIX # Avoiding sort order differences between OSes
 pre-app: $(XULRUNNER_BASE_DIRECTORY) $(STAGE_DIR)
 	@$(call run-js-command,pre-app)
 
+.PHONY: rebuild
+rebuild: $(XULRUNNER_BASE_DIRECTORY) $(STAGE_DIR)
+	@$(call run-js-command,rebuild)
+
 .PHONY: app
 app: $(XULRUNNER_BASE_DIRECTORY) pre-app | $(STAGE_DIR)
 	@$(call run-js-command,app)
