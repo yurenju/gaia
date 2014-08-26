@@ -502,6 +502,11 @@ $(STAGE_DIR):
 
 LANG=POSIX # Avoiding sort order differences between OSes
 
+# rebuild is a rule only for testing
+.PHONY: rebuild
+rebuild: $(XULRUNNER_BASE_DIRECTORY)
+	@$(call run-js-command,rebuild)
+
 .PHONY: app
 app: $(XULRUNNER_BASE_DIRECTORY)
 	@$(call run-js-command,app)
